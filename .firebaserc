@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "firebase-chat",
+    "dev": "firebase-chat"
+  },
+  "targets": {},
+  "etags": {}
+}
