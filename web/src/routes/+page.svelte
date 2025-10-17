@@ -15,4 +15,6 @@
     }
 </script>
 
-<button onclick={() => send()}>Go to Login</button>
+<button onclick={() => send()}>
+    Send
+</button>
