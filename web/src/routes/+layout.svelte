@@ -14,6 +14,7 @@
 		const auth = getAuth();
 		const sub = auth.onAuthStateChanged((user) => {
 			loading = false;
+			console.log(user?.uid)
 		});
 		return () => sub();
 	});
@@ -57,14 +58,7 @@
 					<nav class="px-2 py-2 overflow-auto flex-1">
 						<ul class="space-y-1">
 							<InfiniteScroll
-								path="chats"
-								queryConstraints={[
-									where(
-										"members",
-										"array-contains",
-										getAuth().currentUser?.uid,
-									),
-								]}
+								path="users/{getAuth().currentUser?.uid}/chats"
 							>
 								{#snippet children(item)}
 									<li>
@@ -81,9 +75,7 @@
 												<div
 													class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm text-gray-600"
 												>
-													{item.name
-														.charAt(0)
-														.toUpperCase()}
+													{item.uid}
 												</div>
 											{/if}
 											<div class="flex-1 min-w-0">
@@ -92,109 +84,23 @@
 												>
 													<span
 														class="font-medium truncate"
-														>{item.name}</span
+														>{item.uid}</span
 													>
 													<span
 														class="text-xs text-gray-400"
-														>{item.lastMessageTime}</span
+														>{item.lastUpdated}</span
 													>
 												</div>
 												<p
 													class="text-sm text-gray-500 truncate"
 												>
-													{item.lastMessagePreview}
+													{item.lastMessage}
 												</p>
 											</div>
 										</button>
 									</li>
 								{/snippet}
 							</InfiniteScroll>
-							<li>
-								<button
-									class="w-full text-left px-3 py-3 rounded-md hover:bg-gray-50 flex items-center gap-3"
-								>
-									<img
-										src="/avatar1.png"
-										alt="Alice"
-										class="w-10 h-10 rounded-full object-cover"
-									/>
-									<div class="flex-1 min-w-0">
-										<div
-											class="flex justify-between items-center"
-										>
-											<span class="font-medium truncate"
-												>Alice</span
-											>
-											<span class="text-xs text-gray-400"
-												>2:34 PM</span
-											>
-										</div>
-										<p
-											class="text-sm text-gray-500 truncate"
-										>
-											Hey — are we still on for today?
-										</p>
-									</div>
-								</button>
-							</li>
-
-							<li>
-								<button
-									class="w-full text-left px-3 py-3 rounded-md hover:bg-gray-50 flex items-center gap-3"
-								>
-									<div
-										class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm text-gray-600"
-									>
-										B
-									</div>
-									<div class="flex-1 min-w-0">
-										<div
-											class="flex justify-between items-center"
-										>
-											<span class="font-medium truncate"
-												>Bob</span
-											>
-											<span class="text-xs text-gray-400"
-												>Yesterday</span
-											>
-										</div>
-										<p
-											class="text-sm text-gray-500 truncate"
-										>
-											Sent a file
-										</p>
-									</div>
-								</button>
-							</li>
-
-							<li>
-								<button
-									class="w-full text-left px-3 py-3 rounded-md hover:bg-gray-50 flex items-center gap-3"
-								>
-									<div
-										class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center"
-									>
-										C
-									</div>
-									<div class="flex-1 min-w-0">
-										<div
-											class="flex justify-between items-center"
-										>
-											<span class="font-medium truncate"
-												>Charlie</span
-											>
-											<span class="text-xs text-gray-400"
-												>Mon</span
-											>
-										</div>
-										<p
-											class="text-sm text-gray-500 truncate"
-										>
-											Typing…
-										</p>
-									</div>
-								</button>
-							</li>
 							<!-- add more conversation items as needed -->
 						</ul>
 					</nav>

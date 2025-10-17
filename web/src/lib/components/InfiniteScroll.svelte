@@ -17,10 +17,14 @@
         getFirestore,
     } from "firebase/firestore";
 
-    const { children, path, queryConstraints } = $props<{
+    const {
+        children,
+        path,
+        queryConstraints = [],
+    } = $props<{
         children?: (item: any) => SvelteComponent;
         path: string;
-        queryConstraints: QueryConstraint[];
+        queryConstraints?: QueryConstraint[];
     }>();
 
     let chunks = $state<
@@ -39,6 +43,7 @@
             let q;
 
             if (startAfterId) {
+                console.log("Loading chunk after:", startAfterId);
                 q = query(
                     collection(getFirestore(), path),
                     where("id", "<", startAfterId),
@@ -56,6 +61,7 @@
             }
 
             const snapshot = await getDocs(q);
+            console.log("Loaded chunk:", snapshot.size);
             snapshot.forEach((doc) => {
                 const data = doc.data();
                 const chunk = {
@@ -159,8 +165,8 @@
 {#each chunks as chunk}
     <div use:observeChunk={chunk.id}>
         {#each chunk.items as item}
-                    {@render children?.(item)}
-                {/each}
+            {@render children?.(item)}
+        {/each}
     </div>
 {/each}
 
