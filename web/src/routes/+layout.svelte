@@ -8,7 +8,6 @@
 
 	let { children } = $props();
 	let loading = $state(true);
-	console.log("layout loaded");
 	onMount(() => {
 		const auth = getAuth();
 		const sub = auth.onAuthStateChanged((user) => {

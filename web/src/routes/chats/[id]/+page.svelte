@@ -3,7 +3,8 @@
     import { getAuth, onAuthStateChanged } from "firebase/auth";
 
     const { data } = $props();
-    const id: string = data.id;
+    const id = $derived(data.id);
+
     onMount(() => {
         const auth = getAuth();
     });
