@@ -1,13 +1,14 @@
 <script lang="ts">
-    import { functions } from "@/firebase";
-    import { httpsCallable } from "firebase/functions";
     import { onMount } from "svelte";
     import { getAuth, onAuthStateChanged } from "firebase/auth";
-    import { goto } from "$app/navigation";
 
-    export let id: string;
-
+    const { data } = $props();
+    const id: string = data.id;
     onMount(() => {
         const auth = getAuth();
     });
 </script>
+<main>
+    <h2>Chat ID</h2>
+    <p>{id}</p>
+</main>

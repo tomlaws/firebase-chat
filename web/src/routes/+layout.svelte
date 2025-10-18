@@ -5,16 +5,15 @@
 	import { onMount } from "svelte";
 	import { getAuth } from "firebase/auth";
 	import InfiniteScroll from "@/components/InfiniteScroll.svelte";
-	import { getDoc, where } from "firebase/firestore";
 
 	let { children } = $props();
 	let loading = $state(true);
-
+	console.log("layout loaded");
 	onMount(() => {
 		const auth = getAuth();
 		const sub = auth.onAuthStateChanged((user) => {
 			loading = false;
-			console.log(user?.uid)
+			console.log(user?.uid);
 		});
 		return () => sub();
 	});
@@ -62,7 +61,8 @@
 							>
 								{#snippet children(item)}
 									<li>
-										<button
+										<a
+											href={`/chats/${item.uid}`}
 											class="w-full text-left px-3 py-3 rounded-md hover:bg-gray-50 flex items-center gap-3"
 										>
 											{#if item.avatarUrl}
@@ -97,7 +97,7 @@
 													{item.lastMessage}
 												</p>
 											</div>
-										</button>
+										</a>
 									</li>
 								{/snippet}
 							</InfiniteScroll>
