@@ -20,7 +20,6 @@
     {#key chatId}
         <InfiniteScroll
             {path}
-            queryConstraints={[where("members", "array-contains", userId)]}
         >
             {#snippet children(item)}
                 <div class="message">
