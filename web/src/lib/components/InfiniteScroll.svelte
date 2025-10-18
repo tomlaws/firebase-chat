@@ -32,26 +32,19 @@
         { id: string; items: any[]; ref: DocumentReference; visible: boolean }[]
     >([]);
     let loading = $state(false);
-
     const observers = new Map<string, IntersectionObserver>();
     const unsubscribers = new Map<string, () => void>();
 
-    async function loadChunk(path: string, startAfterId?: string) {
+    async function loadChunk(path: string, before?: string) {
         if (loading) return;
         loading = true;
-        const r = await getDoc(
-            doc(
-                getFirestore(),
-                "chats/AAeEPsuDUkcObYLAx2FtR7oF05e2_nZvylNeHiZQjWtmmkZWNUKp2qjm1/messages/0199f6e0-d45f-79f4-ab96-5a3d07f84d49",
-            ),
-        );
         try {
             let q;
-            if (startAfterId) {
-                console.log("Loading chunk after:", startAfterId);
+            if (before) {
+                console.log("Loading chunk before:", before);
                 q = query(
                     collection(getFirestore(), path),
-                    where("id", "<", startAfterId),
+                    where("__name__", "<", before),
                     ...queryConstraints,
                     orderBy("__name__", "desc"),
                     limit(1),
@@ -67,14 +60,13 @@
             }
 
             const snapshot = await getDocs(q);
-            console.log("Loaded chunk:", snapshot.size);
             snapshot.forEach((doc) => {
                 const data = doc.data();
                 const chunk = {
-                    id: data.id,
+                    id: doc.id,
                     items: data.items,
                     ref: doc.ref,
-                    visible: !startAfterId,
+                    visible: !before,
                 };
                 chunks = [...chunks, chunk];
                 if (chunk.visible) subscribeToChunk(chunk);
@@ -165,10 +157,50 @@
         };
     }
     onMount(() => {
-        loadChunk(path);
+        console.log("Mounting InfiniteScroll for path:", path);
+        let initialized = false;
+        // listen to new chunk
+        const unsubscribe = onSnapshot(
+            query(
+                collection(getFirestore(), path),
+                ...queryConstraints,
+                orderBy("__name__", "desc"),
+                limit(1),
+            ),
+            (snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added") {
+                        console.log(change)
+                        const doc = change.doc;
+                        const data = doc.data();
+                        // check if chunk already exists
+                        if (chunks.find((c) => c.id === data.id)) return;
+                        const chunk = {
+                            id: doc.id,
+                            items: data.items,
+                            ref: doc.ref,
+                            visible: true,
+                        };
+                        chunks = [chunk, ...chunks];
+                        subscribeToChunk(chunk);
+                    }
+                });
+                if (!initialized) {
+                    initialized = true;
+                    if (snapshot.empty) {
+                        loadChunk(path);
+                    } else {
+                        // load chunk before the newest one
+                        const newest = snapshot.docs[0];
+                        loadChunk(path, newest.id);
+                    }
+                }
+            },
+        );
         return () => {
             observers.forEach((observer) => observer.disconnect());
             unsubscribers.forEach((unsub) => unsub());
+            unsubscribe();
         };
     });
     $effect(() => {
