@@ -10,18 +10,26 @@
     const chatId = $derived(
         userId > id ? `${id}_${userId}` : `${userId}_${id}`,
     );
+    let path = $derived(`chats/${chatId}/messages`);
     onMount(() => {
         const auth = getAuth();
     });
 </script>
 
 <main>
-    <InfiniteScroll path={`chats/${chatId}/messages`} queryConstraints={[where("members", "array-contains", userId)]}>
-        {#snippet children(item)}
-            <div class="message">
-                <p>{item.text}</p>
-                <span class="timestamp">{new Date(item.timestamp).toLocaleString()}</span>
-            </div>
-        {/snippet}
-    </InfiniteScroll>
+    {#key chatId}
+        <InfiniteScroll
+            {path}
+            queryConstraints={[where("members", "array-contains", userId)]}
+        >
+            {#snippet children(item)}
+                <div class="message">
+                    <p>{item.text}</p>
+                    <span class="timestamp"
+                        >{new Date(item.timestamp).toLocaleString()}</span
+                    >
+                </div>
+            {/snippet}
+        </InfiniteScroll>
+    {/key}
 </main>

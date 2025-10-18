@@ -18,7 +18,7 @@
         doc,
     } from "firebase/firestore";
 
-    const {
+    let {
         children,
         path,
         queryConstraints = [],
@@ -36,14 +36,17 @@
     const observers = new Map<string, IntersectionObserver>();
     const unsubscribers = new Map<string, () => void>();
 
-    async function loadChunk(startAfterId?: string) {
+    async function loadChunk(path: string, startAfterId?: string) {
         if (loading) return;
         loading = true;
-        const r = await getDoc(doc(getFirestore(), "chats/AAeEPsuDUkcObYLAx2FtR7oF05e2_nZvylNeHiZQjWtmmkZWNUKp2qjm1/messages/0199f6e0-d45f-79f4-ab96-5a3d07f84d49"));
-        console.log(r.data());
+        const r = await getDoc(
+            doc(
+                getFirestore(),
+                "chats/AAeEPsuDUkcObYLAx2FtR7oF05e2_nZvylNeHiZQjWtmmkZWNUKp2qjm1/messages/0199f6e0-d45f-79f4-ab96-5a3d07f84d49",
+            ),
+        );
         try {
             let q;
-            console.log(path);
             if (startAfterId) {
                 console.log("Loading chunk after:", startAfterId);
                 q = query(
@@ -54,6 +57,7 @@
                     limit(1),
                 );
             } else {
+                chunks = [];
                 q = query(
                     collection(getFirestore(), path),
                     ...queryConstraints,
@@ -150,7 +154,7 @@
         const observer = new IntersectionObserver(([entry]) => {
             if (entry.isIntersecting && !loading) {
                 const oldest = chunks[chunks.length - 1];
-                if (oldest) loadChunk(oldest.id);
+                if (oldest) loadChunk(path, oldest.id);
             }
         });
         observer.observe(node);
@@ -160,13 +164,15 @@
             },
         };
     }
-
-    onMount(()=>{
-        loadChunk();
-        return ()=>{
+    onMount(() => {
+        loadChunk(path);
+        return () => {
             observers.forEach((observer) => observer.disconnect());
             unsubscribers.forEach((unsub) => unsub());
         };
+    });
+    $effect(() => {
+        console.log(path)
     });
 </script>
 
@@ -179,7 +185,6 @@
 {/each}
 
 <div use:observeScrollEnd class="scroll-trigger"></div>
-
 {#if loading}
     <div class="loading">Loading more items…</div>
 {/if}
