@@ -107,7 +107,7 @@
 
 				<!-- Right: render children (chat content) -->
 				<main class="flex-1 bg-white">
-					<div class="h-full">
+					<div class="h-full relative">
 						{@render children?.()}
 					</div>
 				</main>

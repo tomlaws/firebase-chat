@@ -14,7 +14,3 @@
             });
     }
 </script>
-
-<button onclick={() => send()}>
-    Send
-</button>

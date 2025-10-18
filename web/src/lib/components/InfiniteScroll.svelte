@@ -15,6 +15,7 @@
         QueryConstraint,
         type DocumentData,
         getFirestore,
+        doc,
     } from "firebase/firestore";
 
     const {
@@ -38,10 +39,11 @@
     async function loadChunk(startAfterId?: string) {
         if (loading) return;
         loading = true;
-
+        const r = await getDoc(doc(getFirestore(), "chats/AAeEPsuDUkcObYLAx2FtR7oF05e2_nZvylNeHiZQjWtmmkZWNUKp2qjm1/messages/0199f6e0-d45f-79f4-ab96-5a3d07f84d49"));
+        console.log(r.data());
         try {
             let q;
-
+            console.log(path);
             if (startAfterId) {
                 console.log("Loading chunk after:", startAfterId);
                 q = query(
@@ -74,7 +76,7 @@
                 if (chunk.visible) subscribeToChunk(chunk);
             });
         } catch (err) {
-            console.error("Failed to load chunk:", err);
+            console.error(`Failed to load chunk from ${path}:`, err);
         } finally {
             loading = false;
         }
@@ -159,7 +161,13 @@
         };
     }
 
-    onMount(() => loadChunk());
+    onMount(()=>{
+        loadChunk();
+        return ()=>{
+            observers.forEach((observer) => observer.disconnect());
+            unsubscribers.forEach((unsub) => unsub());
+        };
+    });
 </script>
 
 {#each chunks as chunk}

@@ -1,15 +1,27 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { getAuth, onAuthStateChanged } from "firebase/auth";
+    import { getAuth } from "firebase/auth";
+    import InfiniteScroll from "@/components/InfiniteScroll.svelte";
+    import { where } from "firebase/firestore";
 
     const { data } = $props();
     const id = $derived(data.id);
-
+    const userId = getAuth().currentUser!.uid;
+    const chatId = $derived(
+        userId > id ? `${id}_${userId}` : `${userId}_${id}`,
+    );
     onMount(() => {
         const auth = getAuth();
     });
 </script>
+
 <main>
-    <h2>Chat ID</h2>
-    <p>{id}</p>
+    <InfiniteScroll path={`chats/${chatId}/messages`} queryConstraints={[where("members", "array-contains", userId)]}>
+        {#snippet children(item)}
+            <div class="message">
+                <p>{item.text}</p>
+                <span class="timestamp">{new Date(item.timestamp).toLocaleString()}</span>
+            </div>
+        {/snippet}
+    </InfiniteScroll>
 </main>
