@@ -22,11 +22,15 @@
             {path}
         >
             {#snippet children(item)}
-                <div class="message">
-                    <p>{item.text}</p>
-                    <span class="timestamp"
-                        >{new Date(item.timestamp).toLocaleString()}</span
-                    >
+                <div class="flex my-4 mx-4" class:justify-end={item.uid === userId}>
+                    <div class={item.uid === userId
+                        ? 'bg-blue-500 text-white rounded-lg rounded-br-none py-2 px-4 max-w-[75%] break-words shadow'
+                        : 'bg-gray-200 text-gray-900 rounded-lg rounded-bl-none py-2 px-4 max-w-[75%] break-words shadow'}>
+                        <p class="text-sm">{item.text}</p>
+                        <span class={item.uid === userId ? 'text-xs text-blue-100/90 block text-right mt-2' : 'text-xs text-gray-500 block mt-1'}>
+                            {item.timestamp?.toDate().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                        </span>
+                    </div>
                 </div>
             {/snippet}
         </InfiniteScroll>

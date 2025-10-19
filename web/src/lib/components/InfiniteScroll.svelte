@@ -16,6 +16,8 @@
         type DocumentData,
         getFirestore,
         doc,
+        QueryDocumentSnapshot,
+        startAfter,
     } from "firebase/firestore";
 
     let {
@@ -29,24 +31,32 @@
     }>();
 
     let chunks = $state<
-        { id: string; items: any[]; ref: DocumentReference; visible: boolean }[]
+        {
+            doc: QueryDocumentSnapshot<DocumentData, DocumentData>;
+            items: any[];
+            visible: boolean;
+        }[]
     >([]);
+    let initialized = $state(false);
     let loading = $state(false);
     const observers = new Map<string, IntersectionObserver>();
     const unsubscribers = new Map<string, () => void>();
 
-    async function loadChunk(path: string, before?: string) {
+    async function loadChunk(
+        path: string,
+        after?: QueryDocumentSnapshot<DocumentData, DocumentData>,
+    ) {
         if (loading) return;
         loading = true;
         try {
             let q;
-            if (before) {
-                console.log("Loading chunk before:", before);
+            if (after) {
+                console.log("Loading chunk after:", after);
                 q = query(
                     collection(getFirestore(), path),
-                    where("__name__", "<", before),
                     ...queryConstraints,
                     orderBy("__name__", "desc"),
+                    startAfter(after),
                     limit(1),
                 );
             } else {
@@ -63,33 +73,38 @@
             snapshot.forEach((doc) => {
                 const data = doc.data();
                 const chunk = {
-                    id: doc.id,
+                    doc: doc,
                     items: data.items,
-                    ref: doc.ref,
-                    visible: !before,
+                    visible: true,
                 };
-                chunks = [...chunks, chunk];
+                console.log(`appending chunk from ${path}:`, chunk);
+                chunks = [chunk, ...chunks];
                 if (chunk.visible) subscribeToChunk(chunk);
             });
         } catch (err) {
             console.error(`Failed to load chunk from ${path}:`, err);
         } finally {
+            console.log("Finished loading chunk from:", path);
             loading = false;
         }
     }
 
     function subscribeToChunk(chunk: {
-        id: any;
+        doc: QueryDocumentSnapshot<DocumentData, DocumentData>;
         items?: any;
-        ref: any;
         visible?: boolean;
     }) {
-        if (unsubscribers.has(chunk.id)) return;
+        if (unsubscribers.has(chunk.doc.id)) return;
         const unsubscribe = onSnapshot(
-            chunk.ref,
+            chunk.doc.ref,
             (doc: DocumentSnapshot<unknown, DocumentData>) => {
                 const data = doc.data() as any;
-                const index = chunks.findIndex((c) => c.id === data.id);
+                const index = chunks.findIndex((c) => c.doc.id === doc.id);
+                console.log(
+                    `Received update for chunk ${doc.id}:`,
+                    data,
+                    index
+                );
                 if (index !== -1) {
                     const updated = [...chunks];
                     updated[index].items = data.items;
@@ -97,7 +112,7 @@
                 }
             },
         );
-        unsubscribers.set(chunk.id, unsubscribe);
+        unsubscribers.set(chunk.doc.id, unsubscribe);
     }
 
     function unsubscribeFromChunk(chunkId: string) {
@@ -111,12 +126,12 @@
     function observeChunk(node: Element, chunkId: string) {
         const observer = new IntersectionObserver(
             ([entry]) => {
-                const chunk = chunks.find((c) => c.id === chunkId);
+                const chunk = chunks.find((c) => c.doc.id === chunkId);
                 if (!chunk) return;
 
                 chunk.visible = entry.isIntersecting;
                 const updated = chunks.map((c) =>
-                    c.id === chunkId
+                    c.doc.id === chunkId
                         ? { ...c, visible: entry.isIntersecting }
                         : c,
                 );
@@ -144,9 +159,12 @@
 
     function observeScrollEnd(node: Element) {
         const observer = new IntersectionObserver(([entry]) => {
-            if (entry.isIntersecting && !loading) {
+            console.log("Scroll end observed:", path);
+            if (entry.isIntersecting) {
                 const oldest = chunks[chunks.length - 1];
-                if (oldest) loadChunk(path, oldest.id);
+                if (oldest) {
+                    loadChunk(path, oldest.doc);
+                }
             }
         });
         observer.observe(node);
@@ -158,8 +176,6 @@
     }
     onMount(() => {
         console.log("Mounting InfiniteScroll for path:", path);
-        let initialized = false;
-        // listen to new chunk
         const unsubscribe = onSnapshot(
             query(
                 collection(getFirestore(), path),
@@ -170,31 +186,23 @@
             (snapshot) => {
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "added") {
-                        console.log(change)
                         const doc = change.doc;
                         const data = doc.data();
                         // check if chunk already exists
-                        if (chunks.find((c) => c.id === data.id)) return;
+                        if (chunks.find((c) => c.doc.id === doc.id)) {
+                            return;
+                        }
                         const chunk = {
-                            id: doc.id,
+                            doc: doc,
                             items: data.items,
-                            ref: doc.ref,
                             visible: true,
                         };
-                        chunks = [chunk, ...chunks];
+                        chunks = [...chunks, chunk];
+                        console.log(chunks);
                         subscribeToChunk(chunk);
                     }
                 });
-                if (!initialized) {
-                    initialized = true;
-                    if (snapshot.empty) {
-                        loadChunk(path);
-                    } else {
-                        // load chunk before the newest one
-                        const newest = snapshot.docs[0];
-                        loadChunk(path, newest.id);
-                    }
-                }
+                initialized = true;
             },
         );
         return () => {
@@ -203,22 +211,20 @@
             unsubscribe();
         };
     });
-    $effect(() => {
-        console.log(path)
-    });
 </script>
 
 {#each chunks as chunk}
-    <div use:observeChunk={chunk.id}>
+    <div use:observeChunk={chunk.doc.id}>
         {#each chunk.items as item}
             {@render children?.(item)}
         {/each}
     </div>
 {/each}
-
-<div use:observeScrollEnd class="scroll-trigger"></div>
+{#if initialized}
+    <div use:observeScrollEnd class="scroll-trigger"></div>
+{/if}
 {#if loading}
-    <div class="loading">Loading more items…</div>
+    <div class="loading">Loading…</div>
 {/if}
 
 <style>
