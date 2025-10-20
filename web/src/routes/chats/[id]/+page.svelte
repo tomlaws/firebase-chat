@@ -2,7 +2,6 @@
     import { onMount } from "svelte";
     import { getAuth } from "firebase/auth";
     import InfiniteScroll from "@/components/InfiniteScroll.svelte";
-    import { where } from "firebase/firestore";
 
     const { data } = $props();
     const id = $derived(data.id);

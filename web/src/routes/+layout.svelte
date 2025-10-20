@@ -5,6 +5,8 @@
 	import { onMount } from "svelte";
 	import { getAuth } from "firebase/auth";
 	import InfiniteScroll from "@/components/InfiniteScroll.svelte";
+    import { httpsCallable } from "firebase/functions";
+    import { functions } from "$lib/firebase";
 
 	let { children } = $props();
 	let loading = $state(true);
@@ -16,6 +18,11 @@
 		});
 		return () => sub();
 	});
+
+	function getUsers(uid: string[]) {
+		const getUserInfo = httpsCallable(functions, "getUserInfo");
+		return getUserInfo({ uid: uid });
+	}
 </script>
 
 <svelte:head>
@@ -57,6 +64,16 @@
 						<ul class="space-y-1">
 							<InfiniteScroll
 								path="users/{getAuth().currentUser?.uid}/chats"
+								transform={(data) => {
+									const uids = data.map((item) => item.uid);
+									const users = getUsers(uids).then(
+										(result) => result.data as any[],
+									);
+									return data.map((item, index) => ({
+										...item,
+										user: users.then((res) => res[index]),
+									}));
+								}}
 							>
 								{#snippet children(item)}
 									<li>
@@ -74,7 +91,7 @@
 												<div
 													class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm text-gray-600"
 												>
-													{item.uid}
+													&#128100;
 												</div>
 											{/if}
 											<div class="flex-1 min-w-0">
@@ -83,7 +100,13 @@
 												>
 													<span
 														class="font-medium truncate"
-														>{item.uid}</span
+														>
+														{#await item.user then user}
+															{user.nickname}
+														{:catch}
+															Loading...
+														{/await}
+													</span
 													>
 													<span
 														class="text-xs text-gray-400"

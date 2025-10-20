@@ -12,6 +12,6 @@ if (!getApps().length) {
 }
 
 const functions = getFunctions(getApp());
-connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+connectFunctionsEmulator(functions, "localhost", 5001);
 
 export { firebaseApp, functions };

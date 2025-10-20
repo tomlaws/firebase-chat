@@ -2,20 +2,15 @@
     import { onMount, type SvelteComponent } from "svelte";
     import {
         getDocs,
-        getDoc,
         onSnapshot,
         query,
         collection,
-        where,
         orderBy,
         limit,
-        type DocumentReference,
         DocumentSnapshot,
-        Query,
         QueryConstraint,
         type DocumentData,
         getFirestore,
-        doc,
         QueryDocumentSnapshot,
         startAfter,
     } from "firebase/firestore";
@@ -24,10 +19,12 @@
         children,
         path,
         queryConstraints = [],
+        transform,
     } = $props<{
         children?: (item: any) => SvelteComponent;
         path: string;
         queryConstraints?: QueryConstraint[];
+        transform?: (data: any[]) => any[];
     }>();
 
     let chunks = $state<
@@ -215,7 +212,7 @@
 
 {#each chunks as chunk}
     <div use:observeChunk={chunk.doc.id}>
-        {#each chunk.items as item}
+        {#each (transform ? transform(chunk.items ?? []) : (chunk.items ?? [])) as item}
             {@render children?.(item)}
         {/each}
     </div>

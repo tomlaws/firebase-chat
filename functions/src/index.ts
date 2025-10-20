@@ -79,3 +79,29 @@ export const sendMessage = onCall(async (request) => {
 
     return { success: true, message };
 });
+
+export const getUserInfo = onCall(async (request) => {
+    if (!request.auth?.uid) {
+        throw new Error('Authentication required');
+    }
+
+    const uid = Array.isArray(request.data.uid) ? request.data.uid : [request.data.uid];
+    if (uid.length === 0) {
+        throw new Error('No UIDs provided');
+    }
+
+    if (uid.length > 100) {
+        throw new Error('Too many UIDs requested at once');
+    }
+
+    const users = await Promise.all(uid.map(async (uid: string) => {
+        console.log(`users/${uid}`);
+        const userDoc = await db.collection('users').doc(uid).get();
+        if (!userDoc.exists) {
+            return { uid, nickname: 'Unknown' };
+        }
+        return userDoc.data();
+    }));
+
+    return users;
+});
