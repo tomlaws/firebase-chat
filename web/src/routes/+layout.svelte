@@ -7,6 +7,7 @@
 	import InfiniteScroll from "@/components/InfiniteScroll.svelte";
     import { httpsCallable } from "firebase/functions";
     import { functions } from "$lib/firebase";
+    import { getUsers } from "@/cache";
 
 	let { children } = $props();
 	let loading = $state(true);
@@ -18,11 +19,6 @@
 		});
 		return () => sub();
 	});
-
-	function getUsers(uid: string[]) {
-		const getUserInfo = httpsCallable(functions, "getUserInfo");
-		return getUserInfo({ uid: uid });
-	}
 </script>
 
 <svelte:head>
@@ -66,12 +62,10 @@
 								path="users/{getAuth().currentUser?.uid}/chats"
 								transform={(data) => {
 									const uids = data.map((item) => item.uid);
-									const users = getUsers(uids).then(
-										(result) => result.data as any[],
-									);
+									const users = getUsers(uids);
 									return data.map((item, index) => ({
 										...item,
-										user: users.then((res) => res[index]),
+										user: users[index],
 									}));
 								}}
 							>

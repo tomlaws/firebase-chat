@@ -1,28 +1,35 @@
 <script lang="ts">
-    let { children } = $props();
-    const data = {
-        conversation: {
-            username: "John Doe",
-            avatarUrl: "/avatars/johndoe.png",
-            lastSeen: "Online 5 minutes ago",
-        },
-    };
-    const convo = data?.conversation ?? {};
+    import { page } from "$app/state";
+    import { getUser } from "@/cache.js";
+
+    const { children, data } = $props();
+    const userId = $derived(page.params.id)!;
+    // const data = {
+    //     conversation: {
+    //         username: "John Doe",
+    //         avatarUrl: "/avatars/johndoe.png",
+    //         lastSeen: "Online 5 minutes ago",
+    //     },
+    // };
     const AVATAR_FALLBACK = "/default-avatar.png";
 </script>
 
 <header class="header" role="banner">
     <img
         class="avatar"
-        src={convo.avatarUrl ?? AVATAR_FALLBACK}
-        alt={convo.username
-            ? `${convo.username} avatar`
-            : "Conversation avatar"}
+        src={AVATAR_FALLBACK}
+        alt={"Conversation avatar"}
         loading="lazy"
     />
     <div class="meta">
-        <div class="username">{convo.username ?? "Unknown"}</div>
-        <div class="lastseen">{convo.lastSeen ?? ""}</div>
+        <div class="username">
+            {#await getUser(userId) then user}
+                {user.nickname}
+            {:catch}
+                Loading...
+            {/await}
+        </div>
+        <div class="lastseen">last seen</div>
     </div>
 </header>
 
