@@ -11,6 +11,8 @@ import { setGlobalOptions } from "firebase-functions";
 import { onCall } from "firebase-functions/https";
 import * as admin from 'firebase-admin';
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { v7 as uuidv7 } from 'uuid';
+import sizeof from "firestore-size";
 
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -36,6 +38,7 @@ setGlobalOptions({ maxInstances: 10 });
 admin.initializeApp();
 const db = getFirestore();
 
+const chunkLimit = 10000000; // 10MB
 export const sendMessage = onCall(async (request) => {
     const uid = request.auth?.uid;
 
@@ -60,21 +63,44 @@ export const sendMessage = onCall(async (request) => {
     }
 
     const message = {
+        uid,
         text,
         timestamp: new Date(),
     };
-    // Store message in Firestore under a chat document
-    const participants = [uid, to].sort();
-    const chatId = participants.join('_');
-    const chatRef = db.collection('chats').doc(chatId);
-    const messageBytes = Buffer.byteLength(text, 'utf8') + 1;
+    const messageSize = sizeof(message);
 
-    // Append message to recentMessages
-    await chatRef.set({
-        participants,
-        messages: FieldValue.arrayUnion(message),
-        totalMessageBytes: FieldValue.increment(messageBytes),
-        lastUpdated: new Date(),
+    // Store message in Firestore under a chat document
+    const members = [uid, to].sort();
+    const chatId = members.join('_');
+    const chatDoc = await db.collection('chats').doc(chatId).get();
+    const data = chatDoc.exists ? chatDoc.data() : null;
+
+    let lastChunkId = uuidv7();
+    let lastChunkSize: FieldValue | number = FieldValue.increment(messageSize);
+
+    if (data) {
+        const existingLastChunkId = data.lastChunkId as string | undefined;
+        const existingBytes = Number(data.lastChunkSize || 0);
+
+        if (existingLastChunkId) lastChunkId = existingLastChunkId;
+
+        // If adding this message would exceed the threshold, start a new chunk.
+        if (existingBytes + messageSize > chunkLimit * 0.8) {
+            lastChunkId = uuidv7();
+            // For a new chunk we should initialize the byte count to this message's size.
+            lastChunkSize = messageSize;
+        }
+    }
+
+    await chatDoc.ref.set({
+        lastChunkId,
+        lastChunkSize,
+    }, { merge: true });
+
+    const messageChunk = db.collection('chats').doc(chatId).collection('messages').doc(lastChunkId);
+
+    await messageChunk.set({
+        items: FieldValue.arrayUnion(message),
     }, { merge: true });
 
     return { success: true, message };

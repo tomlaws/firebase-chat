@@ -8,6 +8,7 @@
     import { httpsCallable } from "firebase/functions";
     import { functions } from "$lib/firebase";
     import { getUsers } from "@/cache";
+    import { page } from "$app/state";
 
 	let { children } = $props();
 	let loading = $state(true);
@@ -73,7 +74,8 @@
 									<li>
 										<a
 											href={`/chats/${item.uid}`}
-											class="w-full text-left px-3 py-3 rounded-md hover:bg-gray-50 flex items-center gap-3"
+											class={`w-full text-left px-3 py-3 rounded-md flex items-center gap-3 ${page?.url?.pathname === `/chats/${item.uid}` ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+											aria-current={page?.url?.pathname === `/chats/${item.uid}` ? 'page' : undefined}
 										>
 											{#if item.avatarUrl}
 												<img
