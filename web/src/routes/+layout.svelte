@@ -5,10 +5,10 @@
 	import { onMount } from "svelte";
 	import { getAuth } from "firebase/auth";
 	import InfiniteScroll from "@/components/InfiniteScroll.svelte";
-    import { httpsCallable } from "firebase/functions";
-    import { functions } from "$lib/firebase";
-    import { getUsers } from "@/cache";
-    import { page } from "$app/state";
+	import { httpsCallable } from "firebase/functions";
+	import { functions } from "$lib/firebase";
+	import { getUsers } from "@/cache";
+	import { page } from "$app/state";
 
 	let { children } = $props();
 	let loading = $state(true);
@@ -74,8 +74,12 @@
 									<li>
 										<a
 											href={`/chats/${item.uid}`}
-											class={`w-full text-left px-3 py-3 rounded-md flex items-center gap-3 ${page?.url?.pathname === `/chats/${item.uid}` ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
-											aria-current={page?.url?.pathname === `/chats/${item.uid}` ? 'page' : undefined}
+											class={`w-full text-left px-3 py-3 rounded-md flex items-center gap-3 ${page?.url?.pathname === `/chats/${item.uid}` ? "bg-blue-50" : "hover:bg-gray-50"}`}
+											aria-current={page?.url
+												?.pathname ===
+											`/chats/${item.uid}`
+												? "page"
+												: undefined}
 										>
 											{#if item.avatarUrl}
 												<img
@@ -96,14 +100,13 @@
 												>
 													<span
 														class="font-medium truncate"
-														>
+													>
 														{#await item.user then user}
 															{user.nickname}
 														{:catch}
 															Loading...
 														{/await}
-													</span
-													>
+													</span>
 													<span
 														class="text-xs text-gray-400"
 														>{item.lastUpdated}</span
@@ -125,10 +128,8 @@
 				</aside>
 
 				<!-- Right: render children (chat content) -->
-				<main class="flex-1 bg-white">
-					<div class="h-full relative">
-						{@render children?.()}
-					</div>
+				<main class="flex-1 flex flex-col bg-white relative">
+					{@render children?.()}
 				</main>
 			</div>
 		</div>

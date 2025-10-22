@@ -75,7 +75,7 @@
                     visible: true,
                 };
                 console.log(`appending chunk from ${path}:`, chunk);
-                chunks = [chunk, ...chunks];
+                chunks = [...chunks, chunk];
                 if (chunk.visible) subscribeToChunk(chunk);
             });
         } catch (err) {
@@ -160,6 +160,7 @@
             if (entry.isIntersecting) {
                 const oldest = chunks[chunks.length - 1];
                 if (oldest) {
+                    console.log("Loading older chunk after:", oldest.doc.id);
                     loadChunk(path, oldest.doc);
                 }
             }
@@ -209,20 +210,21 @@
         };
     });
 </script>
-
-{#each chunks as chunk}
-    <div use:observeChunk={chunk.doc.id}>
-        {#each (transform ? transform(chunk.items ?? []) : (chunk.items ?? [])) as item}
-            {@render children?.(item)}
-        {/each}
-    </div>
-{/each}
-{#if initialized}
-    <div use:observeScrollEnd class="scroll-trigger"></div>
-{/if}
-{#if loading}
+<div class="overflow-y-auto flex-1 flex flex-col flex-col-reverse min-h-0">
+    {#each chunks as chunk}
+        <div use:observeChunk={chunk.doc.id}>
+            {#each (transform ? transform(chunk.items ?? []) : (chunk.items ?? [])) as item}
+                {@render children?.(item)}
+            {/each}
+        </div>
+    {/each}
+    {#if initialized}
+        <div use:observeScrollEnd class="scroll-trigger"></div>
+    {/if}
+</div>
+<!-- {#if loading}
     <div class="loading">Loading…</div>
-{/if}
+{/if} -->
 
 <style>
     .item {

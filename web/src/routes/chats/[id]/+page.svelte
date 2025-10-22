@@ -24,7 +24,7 @@
     }
 </script>
 
-<main>
+<div class="flex-1 flex flex-col min-h-0 overflow-hidden">
     {#key chatId}
         <InfiniteScroll {path}>
             {#snippet children(item)}
@@ -43,12 +43,10 @@
                                 ? "text-xs text-blue-100/90 block text-right mt-2"
                                 : "text-xs text-gray-500 block mt-1"}
                         >
-                            {item.timestamp
-                                ?.toDate()
-                                .toLocaleTimeString([], {
-                                    hour: "numeric",
-                                    minute: "2-digit",
-                                })}
+                            {item.timestamp?.toDate().toLocaleTimeString([], {
+                                hour: "numeric",
+                                minute: "2-digit",
+                            })}
                         </span>
                     </div>
                 </div>
@@ -81,4 +79,4 @@
             </form>
         </div>
     {/key}
-</main>
+</div>
