@@ -7,12 +7,13 @@
         collection,
         orderBy,
         limit,
-        DocumentSnapshot,
         QueryConstraint,
-        type DocumentData,
         getFirestore,
         QueryDocumentSnapshot,
         startAfter,
+        Query,
+        QuerySnapshot,
+        type DocumentData,
     } from "firebase/firestore";
 
     let {
@@ -27,129 +28,150 @@
         transform?: (data: any[]) => any[];
     }>();
 
-    let chunks = $state<
-        {
-            doc: QueryDocumentSnapshot<DocumentData, DocumentData>;
-            items: any[];
-            visible: boolean;
-        }[]
-    >([]);
+    type Chunk = {
+        query?: Query<DocumentData, DocumentData> | null;
+        doc: QueryDocumentSnapshot<DocumentData, DocumentData>;
+        visible: boolean;
+    };
+    let chunks = $state<Chunk[]>([]);
     let initialized = $state(false);
     let loading = $state(false);
-    const observers = new Map<string, IntersectionObserver>();
-    const unsubscribers = new Map<string, () => void>();
+    const observers = new Map<
+        Query<DocumentData, DocumentData>,
+        IntersectionObserver
+    >();
+    const unsubscribers = new Map<
+        Query<DocumentData, DocumentData>,
+        () => void
+    >();
 
-    async function loadChunk(
-        path: string,
-        after?: QueryDocumentSnapshot<DocumentData, DocumentData>,
-    ) {
-        if (loading) return;
-        loading = true;
-        try {
-            let q;
-            if (after) {
-                console.log("Loading chunk after:", after);
-                q = query(
-                    collection(getFirestore(), path),
-                    ...queryConstraints,
-                    orderBy("__name__", "desc"),
-                    startAfter(after),
-                    limit(1),
-                );
-            } else {
-                chunks = [];
-                q = query(
-                    collection(getFirestore(), path),
-                    ...queryConstraints,
-                    orderBy("__name__", "desc"),
-                    limit(1),
-                );
-            }
+    // async function loadChunk(
+    //     path: string,
+    //     after?: QueryDocumentSnapshot<DocumentData, DocumentData>,
+    // ) {
+    //     console.log("Loading older chunk after:", after?.id);
+    //     if (loading) return;
+    //     loading = true;
+    //     try {
+    //         let q;
+    //         if (after) {
+    //             q = query(
+    //                 collection(getFirestore(), path),
+    //                 ...queryConstraints,
+    //                 orderBy("__name__", "desc"),
+    //                 startAfter(after),
+    //                 limit(1),
+    //             );
+    //         } else {
+    //             chunks = [];
+    //             q = query(
+    //                 collection(getFirestore(), path),
+    //                 ...queryConstraints,
+    //                 orderBy("__name__", "desc"),
+    //                 limit(1),
+    //             );
+    //         }
 
-            const snapshot = await getDocs(q);
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                const chunk = {
-                    doc: doc,
-                    items: data.items,
-                    visible: true,
-                };
-                console.log(`appending chunk from ${path}:`, chunk);
-                chunks = [...chunks, chunk];
-                if (chunk.visible) subscribeToChunk(chunk);
-            });
-        } catch (err) {
-            console.error(`Failed to load chunk from ${path}:`, err);
-        } finally {
-            console.log("Finished loading chunk from:", path);
-            loading = false;
-        }
-    }
+    //         const snapshot = await getDocs(q);
+    //         snapshot.forEach((doc) => {
+    //             const data = doc.data();
+    //             const chunk = {
+    //                 doc: doc,
+    //                 items: data.items,
+    //                 visible: true,
+    //             };
+    //             chunks = [...chunks, chunk];
+    //             if (chunk.visible) subscribeQuery(chunk);
+    //         });
+    //     } catch (err) {
+    //         console.error(`Failed to load chunk from ${path}:`, err);
+    //     } finally {
+    //         loading = false;
+    //     }
+    // }
 
-    function subscribeToChunk(chunk: {
-        doc: QueryDocumentSnapshot<DocumentData, DocumentData>;
-        items?: any;
-        visible?: boolean;
-    }) {
-        if (unsubscribers.has(chunk.doc.id)) return;
+    function subscribeQuery(query: Query<DocumentData, DocumentData>) {
+        if (!query || unsubscribers.has(query)) return;
         const unsubscribe = onSnapshot(
-            chunk.doc.ref,
-            (doc: DocumentSnapshot<unknown, DocumentData>) => {
-                const data = doc.data() as any;
-                const index = chunks.findIndex((c) => c.doc.id === doc.id);
-                console.log(
-                    `Received update for chunk ${doc.id}:`,
-                    data,
-                    index
-                );
-                if (index !== -1) {
-                    const updated = [...chunks];
-                    updated[index].items = data.items;
-                    chunks = updated;
+            query,
+            (snapshot: QuerySnapshot<DocumentData, DocumentData>) => {
+                for (const doc of snapshot.docs) {
+                    const data = doc.data();
+                    // check if chunk already exists
+                    if (chunks.find((c) => c.doc.id === doc.id)) {
+                        // replace existing chunk
+                        const updated = chunks.map((c) =>
+                            c.doc.id === doc.id
+                                ? { ...c, items: data.items }
+                                : c,
+                        );
+                        chunks = updated;
+                        continue;
+                    }
+                    // const chunk = {
+                    //     doc: doc,
+                    //     visible: true,
+                    // };
+                    // chunks = [...chunks, chunk];
+
+                    // find the position to insert the new chunk
+                    const index = chunks.findIndex((c) => c.doc.id < doc.id);
+                    if (index === -1) {
+                        chunks = [...chunks, { query, doc, visible: true }];
+                    } else {
+                        const before = chunks.slice(0, index);
+                        const after = chunks.slice(index);
+                        chunks = [
+                            ...before,
+                            { query, doc, visible: true },
+                            ...after,
+                        ];
+                    }
                 }
             },
         );
-        unsubscribers.set(chunk.doc.id, unsubscribe);
+        unsubscribers.set(query, unsubscribe);
     }
 
-    function unsubscribeFromChunk(chunkId: string) {
-        const unsub = unsubscribers.get(chunkId);
+    function unsubscribeQuery(query: Query<DocumentData, DocumentData>) {
+        if (!query) return;
+        const unsub = unsubscribers.get(query);
         if (unsub) {
             unsub();
-            unsubscribers.delete(chunkId);
+            unsubscribers.delete(query);
         }
     }
 
-    function observeChunk(node: Element, chunkId: string) {
+    function observeChunk(node: Element, chunk: Chunk) {
+        if (!chunk || !chunk.query) return;
         const observer = new IntersectionObserver(
             ([entry]) => {
-                const chunk = chunks.find((c) => c.doc.id === chunkId);
-                if (!chunk) return;
+                // const chunk = chunks.find((c) => c.query === chunk.query);
+                // if (!chunk) return;
 
                 chunk.visible = entry.isIntersecting;
-                const updated = chunks.map((c) =>
-                    c.doc.id === chunkId
-                        ? { ...c, visible: entry.isIntersecting }
-                        : c,
-                );
-                chunks = updated;
+                // chunks = chunks.map((c) =>
+                //     c.query === chunk.query
+                //         ? { ...c, visible: entry.isIntersecting }
+                //         : c,
+                // );
 
                 if (entry.isIntersecting) {
-                    subscribeToChunk(chunk);
+                    subscribeQuery(chunk.query!);
                 } else {
-                    unsubscribeFromChunk(chunkId);
+                    unsubscribeQuery(chunk.query!);
                 }
             },
             { threshold: 0 },
         );
 
         observer.observe(node);
-        observers.set(chunkId, observer);
+        observers.set(chunk.query, observer);
 
         return {
             destroy() {
                 observer.disconnect();
-                observers.delete(chunkId);
+                observers.delete(chunk.query!);
             },
         };
     }
@@ -160,8 +182,14 @@
             if (entry.isIntersecting) {
                 const oldest = chunks[chunks.length - 1];
                 if (oldest) {
-                    console.log("Loading older chunk after:", oldest.doc.id);
-                    loadChunk(path, oldest.doc);
+                    const q = query(
+                        collection(getFirestore(), path),
+                        ...queryConstraints,
+                        orderBy("__name__", "desc"),
+                        startAfter(oldest.doc.id),
+                        limit(1),
+                    );
+                    subscribeQuery(q);
                 }
             }
         });
@@ -173,7 +201,6 @@
         };
     }
     onMount(() => {
-        console.log("Mounting InfiniteScroll for path:", path);
         const unsubscribe = onSnapshot(
             query(
                 collection(getFirestore(), path),
@@ -183,45 +210,58 @@
             ),
             (snapshot) => {
                 snapshot.docChanges().forEach((change) => {
-                    if (change.type === "added") {
-                        const doc = change.doc;
-                        const data = doc.data();
-                        // check if chunk already exists
-                        if (chunks.find((c) => c.doc.id === doc.id)) {
-                            return;
-                        }
-                        const chunk = {
-                            doc: doc,
-                            items: data.items,
-                            visible: true,
-                        };
-                        chunks = [...chunks, chunk];
-                        console.log(chunks);
-                        subscribeToChunk(chunk);
+                    const doc = change.doc;
+                    if (chunks.find((c) => c.doc.id === doc.id)) {
+                        // replace existing chunk
+                        const updated = chunks.map((c) =>
+                            c.doc.id === doc.id ? { ...c, doc: doc } : c,
+                        );
+                        chunks = updated;
+                    } else {
+                        // new chunk is created, subscribe back the previous chunk
+                        subscribeQuery(
+                            query(
+                                collection(getFirestore(), path),
+                                ...queryConstraints,
+                                orderBy("__name__", "desc"),
+                                startAfter(doc.id),
+                                limit(1),
+                            ),
+                        );
                     }
+                    const chunk = {
+                        query: null,
+                        doc: doc,
+                        visible: true,
+                    };
+                    chunks = [...chunks, chunk];
                 });
                 initialized = true;
             },
         );
         return () => {
+            unsubscribe();
             observers.forEach((observer) => observer.disconnect());
             unsubscribers.forEach((unsub) => unsub());
-            unsubscribe();
         };
     });
 </script>
+
 <div class="overflow-y-auto flex-1 flex flex-col flex-col-reverse min-h-0">
     {#each chunks as chunk}
-        <div use:observeChunk={chunk.doc.id}>
-            {#each (transform ? transform(chunk.items ?? []) : (chunk.items ?? [])) as item}
+        <div use:observeChunk={chunk}>
+            {#each transform ? transform(chunk.doc.data().items ?? []) : (chunk.doc.data().items ?? []) as item}
                 {@render children?.(item)}
             {/each}
         </div>
     {/each}
     {#if initialized}
-        <div use:observeScrollEnd class="scroll-trigger"></div>
+        {#key chunks.length}
+            <div use:observeScrollEnd class="scroll-trigger"></div>
+        {/key}
     {/if}
 </div>
+
 <!-- {#if loading}
     <div class="loading">Loading…</div>
 {/if} -->

@@ -4,13 +4,6 @@
 
     const { children, data } = $props();
     const userId = $derived(page.params.id)!;
-    // const data = {
-    //     conversation: {
-    //         username: "John Doe",
-    //         avatarUrl: "/avatars/johndoe.png",
-    //         lastSeen: "Online 5 minutes ago",
-    //     },
-    // };
     const AVATAR_FALLBACK = "/default-avatar.png";
 </script>
 
