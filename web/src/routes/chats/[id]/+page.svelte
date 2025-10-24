@@ -4,6 +4,7 @@
     import InfiniteScroll from "@/components/InfiniteScroll.svelte";
     import { httpsCallable } from "firebase/functions";
     import { functions } from "@/firebase.js";
+    import { orderBy } from "firebase/firestore";
 
     const { data } = $props();
     const id = $derived(data.id);
@@ -26,10 +27,10 @@
 
 <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
     {#key chatId}
-        <InfiniteScroll {path}>
+        <InfiniteScroll {path} orderBy={orderBy("__name__", "desc")}>
             {#snippet children(item)}
                 <div
-                    class="flex my-4 mx-4"
+                    class="flex py-2 px-4"
                     class:justify-end={item.uid === userId}
                 >
                     <div

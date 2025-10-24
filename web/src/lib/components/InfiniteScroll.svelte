@@ -5,7 +5,6 @@
         onSnapshot,
         query,
         collection,
-        orderBy,
         limit,
         QueryConstraint,
         getFirestore,
@@ -14,17 +13,20 @@
         Query,
         QuerySnapshot,
         type DocumentData,
+        QueryOrderByConstraint,
     } from "firebase/firestore";
 
     let {
         children,
         path,
         queryConstraints = [],
+        orderBy,
         transform,
     } = $props<{
         children?: (item: any) => SvelteComponent;
         path: string;
         queryConstraints?: QueryConstraint[];
+        orderBy: QueryOrderByConstraint;
         transform?: (data: any[]) => any[];
     }>();
 
@@ -35,7 +37,6 @@
     };
     let chunks = $state<Chunk[]>([]);
     let initialized = $state(false);
-    let loading = $state(false);
     const observers = new Map<
         Query<DocumentData, DocumentData>,
         IntersectionObserver
@@ -45,76 +46,22 @@
         () => void
     >();
 
-    // async function loadChunk(
-    //     path: string,
-    //     after?: QueryDocumentSnapshot<DocumentData, DocumentData>,
-    // ) {
-    //     console.log("Loading older chunk after:", after?.id);
-    //     if (loading) return;
-    //     loading = true;
-    //     try {
-    //         let q;
-    //         if (after) {
-    //             q = query(
-    //                 collection(getFirestore(), path),
-    //                 ...queryConstraints,
-    //                 orderBy("__name__", "desc"),
-    //                 startAfter(after),
-    //                 limit(1),
-    //             );
-    //         } else {
-    //             chunks = [];
-    //             q = query(
-    //                 collection(getFirestore(), path),
-    //                 ...queryConstraints,
-    //                 orderBy("__name__", "desc"),
-    //                 limit(1),
-    //             );
-    //         }
-
-    //         const snapshot = await getDocs(q);
-    //         snapshot.forEach((doc) => {
-    //             const data = doc.data();
-    //             const chunk = {
-    //                 doc: doc,
-    //                 items: data.items,
-    //                 visible: true,
-    //             };
-    //             chunks = [...chunks, chunk];
-    //             if (chunk.visible) subscribeQuery(chunk);
-    //         });
-    //     } catch (err) {
-    //         console.error(`Failed to load chunk from ${path}:`, err);
-    //     } finally {
-    //         loading = false;
-    //     }
-    // }
-
     function subscribeQuery(query: Query<DocumentData, DocumentData>) {
         if (!query || unsubscribers.has(query)) return;
         const unsubscribe = onSnapshot(
             query,
             (snapshot: QuerySnapshot<DocumentData, DocumentData>) => {
                 for (const doc of snapshot.docs) {
-                    const data = doc.data();
+                    // const data = doc.data();
                     // check if chunk already exists
                     if (chunks.find((c) => c.doc.id === doc.id)) {
                         // replace existing chunk
                         const updated = chunks.map((c) =>
-                            c.doc.id === doc.id
-                                ? { ...c, items: data.items }
-                                : c,
+                            c.doc.id === doc.id ? { ...c, doc: doc } : c,
                         );
                         chunks = updated;
                         continue;
                     }
-                    // const chunk = {
-                    //     doc: doc,
-                    //     visible: true,
-                    // };
-                    // chunks = [...chunks, chunk];
-
-                    // find the position to insert the new chunk
                     const index = chunks.findIndex((c) => c.doc.id < doc.id);
                     if (index === -1) {
                         chunks = [...chunks, { query, doc, visible: true }];
@@ -146,19 +93,12 @@
         if (!chunk || !chunk.query) return;
         const observer = new IntersectionObserver(
             ([entry]) => {
-                // const chunk = chunks.find((c) => c.query === chunk.query);
-                // if (!chunk) return;
-
                 chunk.visible = entry.isIntersecting;
-                // chunks = chunks.map((c) =>
-                //     c.query === chunk.query
-                //         ? { ...c, visible: entry.isIntersecting }
-                //         : c,
-                // );
-
                 if (entry.isIntersecting) {
+                    console.log("Chunk visible:", chunk.doc.id);
                     subscribeQuery(chunk.query!);
                 } else {
+                    console.log("Chunk not visible:", chunk.doc.id);
                     unsubscribeQuery(chunk.query!);
                 }
             },
@@ -185,7 +125,7 @@
                     const q = query(
                         collection(getFirestore(), path),
                         ...queryConstraints,
-                        orderBy("__name__", "desc"),
+                        orderBy,
                         startAfter(oldest.doc.id),
                         limit(1),
                     );
@@ -200,41 +140,51 @@
             },
         };
     }
+
+    function getChunkItems(chunk: Chunk) {
+        const data = chunk.doc.data();
+        return transform ? transform(data.items ?? []) : data.items ?? [];
+
+    }
+
     onMount(() => {
         const unsubscribe = onSnapshot(
             query(
                 collection(getFirestore(), path),
                 ...queryConstraints,
-                orderBy("__name__", "desc"),
+                orderBy,
                 limit(1),
             ),
             (snapshot) => {
                 snapshot.docChanges().forEach((change) => {
                     const doc = change.doc;
                     if (chunks.find((c) => c.doc.id === doc.id)) {
+                        console.log("Chunk updated:", doc.id);
                         // replace existing chunk
                         const updated = chunks.map((c) =>
                             c.doc.id === doc.id ? { ...c, doc: doc } : c,
                         );
                         chunks = updated;
                     } else {
+                        console.log("New chunk detected:", doc.id);
                         // new chunk is created, subscribe back the previous chunk
                         subscribeQuery(
                             query(
                                 collection(getFirestore(), path),
                                 ...queryConstraints,
-                                orderBy("__name__", "desc"),
+                                orderBy,
                                 startAfter(doc.id),
                                 limit(1),
                             ),
                         );
+                        // add new chunk
+                        const chunk = {
+                            query: null,
+                            doc: doc,
+                            visible: true,
+                        };
+                        chunks = [...chunks, chunk];
                     }
-                    const chunk = {
-                        query: null,
-                        doc: doc,
-                        visible: true,
-                    };
-                    chunks = [...chunks, chunk];
                 });
                 initialized = true;
             },
@@ -249,8 +199,8 @@
 
 <div class="overflow-y-auto flex-1 flex flex-col flex-col-reverse min-h-0">
     {#each chunks as chunk}
-        <div use:observeChunk={chunk}>
-            {#each transform ? transform(chunk.doc.data().items ?? []) : (chunk.doc.data().items ?? []) as item}
+        <div use:observeChunk={chunk} class="item">
+            {#each getChunkItems(chunk) as item}
                 {@render children?.(item)}
             {/each}
         </div>
@@ -267,10 +217,10 @@
 {/if} -->
 
 <style>
-    .item {
+    /* .item {
         padding: 1rem;
         border-bottom: 1px solid #ccc;
-    }
+    } */
     .scroll-trigger {
         height: 1px;
     }

@@ -5,10 +5,9 @@
 	import { onMount } from "svelte";
 	import { getAuth } from "firebase/auth";
 	import InfiniteScroll from "@/components/InfiniteScroll.svelte";
-	import { httpsCallable } from "firebase/functions";
-	import { functions } from "$lib/firebase";
 	import { getUsers } from "@/cache";
 	import { page } from "$app/state";
+    import { orderBy, where } from "firebase/firestore";
 
 	let { children } = $props();
 	let loading = $state(true);
@@ -60,7 +59,11 @@
 					<nav class="px-2 py-2 overflow-auto flex-1">
 						<ul class="space-y-1">
 							<InfiniteScroll
-								path="users/{getAuth().currentUser?.uid}/chats"
+								path="chats"
+								queryConstraints={[
+									where("members", "array-contains", getAuth().currentUser?.uid),
+								]}
+								orderBy={orderBy("lastUpdated", "desc")}
 								transform={(data) => {
 									const uids = data.map((item) => item.uid);
 									const users = getUsers(uids);
