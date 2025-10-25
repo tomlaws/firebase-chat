@@ -27,7 +27,7 @@ export type Conversation = {
 export const chat = createChat();
 
 export function createChat() {
-    let currentUid = $state<string | null>(null);
+    let currentUid = $state<string>();
     let conversations = $state<Array<QueryDocumentSnapshot<DocumentData, DocumentData>>>([]);
 
     function initializeChat(uid: string): Unsubscribe {
@@ -84,7 +84,12 @@ export function createChat() {
         );
     }
 
+    function getUid() {
+        return currentUid;
+    }
+
     return {
+        getUid,
         conversations,
         initializeChat,
         getMoreConversations

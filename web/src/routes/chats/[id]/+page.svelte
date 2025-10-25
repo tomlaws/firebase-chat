@@ -1,14 +1,13 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import { getAuth } from "firebase/auth";
     import ChunkedInfiniteScroll from "@/components/ChunkedInfiniteScroll.svelte";
     import { httpsCallable } from "firebase/functions";
     import { functions } from "@/firebase.js";
     import { orderBy } from "firebase/firestore";
+    import { chat } from "@/chat.svelte.js";
 
     const { data } = $props();
     const id = $derived(data.id);
-    let userId = $state<string>();
+    const userId = $derived(chat.getUid());
     const chatId = $derived(
         userId ? userId > id ? `${id}_${userId}` : `${userId}_${id}` : null,
     );
@@ -23,13 +22,6 @@
                 console.error("Error calling function:", error);
             });
     }
-    onMount(() => {
-        const auth = getAuth();
-        const unsub = auth.onAuthStateChanged((user) => {
-            userId = user?.uid;
-        });
-        return () => unsub();
-    });
 </script>
 
 <div class="flex-1 flex flex-col min-h-0 overflow-hidden">

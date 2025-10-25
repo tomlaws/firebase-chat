@@ -8,19 +8,17 @@
 	import InfiniteScroll from "@/components/InfiniteScroll.svelte";
 	import { userLoader } from "@/cache";
 	import { chat } from "@/chat.svelte";
-	import { derived } from "svelte/store";
 
 	let { children } = $props();
-	let userId = $state<string | null>(null);
 	let loading = $state(false);
 	let unsub: (() => void) | null = null;
 	onMount(() => {
 		const auth = getAuth();
 		const sub = auth.onAuthStateChanged((user) => {
-			userId = user?.uid ?? null;
 			if (unsub) unsub();
-			if (!userId) return;
-			unsub = chat.initializeChat(userId);
+			if (!user) return;
+			console.log("Initializing chat for user:", user.uid);
+			unsub = chat.initializeChat(user.uid);
 			loading = false;
 		});
 		return () => sub();
@@ -35,7 +33,7 @@
 	<div class="flex items-center justify-center min-h-screen">
 		<div class="loader">Loading...</div>
 	</div>
-{:else if userId}
+{:else}
 	<div class="min-h-screen bg-gray-100">
 		<div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
 			<div
@@ -154,9 +152,5 @@
 				</main>
 			</div>
 		</div>
-	</div>
-{:else}
-	<div class="flex items-center justify-center min-h-screen">
-		<div class="loader">Loading...</div>
 	</div>
 {/if}
