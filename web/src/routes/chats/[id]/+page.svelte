@@ -1,16 +1,16 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { getAuth } from "firebase/auth";
-    import InfiniteScroll from "@/components/InfiniteScroll.svelte";
+    import ChunkedInfiniteScroll from "@/components/ChunkedInfiniteScroll.svelte";
     import { httpsCallable } from "firebase/functions";
     import { functions } from "@/firebase.js";
     import { orderBy } from "firebase/firestore";
 
     const { data } = $props();
     const id = $derived(data.id);
-    const userId = getAuth().currentUser!.uid;
+    let userId = $state<string>();
     const chatId = $derived(
-        userId > id ? `${id}_${userId}` : `${userId}_${id}`,
+        userId ? userId > id ? `${id}_${userId}` : `${userId}_${id}` : null,
     );
     let path = $derived(`chats/${chatId}/messages`);
     function sendMessage(text: string) {
@@ -23,11 +23,19 @@
                 console.error("Error calling function:", error);
             });
     }
+    onMount(() => {
+        const auth = getAuth();
+        const unsub = auth.onAuthStateChanged((user) => {
+            userId = user?.uid;
+        });
+        return () => unsub();
+    });
 </script>
 
 <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
+    {#if userId}
     {#key chatId}
-        <InfiniteScroll {path} orderBy={orderBy("__name__", "desc")}>
+        <ChunkedInfiniteScroll {path} orderBy={orderBy("__name__", "desc")}>
             {#snippet children(item)}
                 <div
                     class="flex py-2 px-4"
@@ -52,7 +60,7 @@
                     </div>
                 </div>
             {/snippet}
-        </InfiniteScroll>
+        </ChunkedInfiniteScroll>
         <div class="p-4">
             <form
                 class="flex"
@@ -80,4 +88,5 @@
             </form>
         </div>
     {/key}
+    {/if}
 </div>

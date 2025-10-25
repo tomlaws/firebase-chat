@@ -1,10 +1,15 @@
 import { httpsCallable } from "firebase/functions";
 import { functions } from "./firebase";
+import DataLoader from "dataloader";
+
+export type User = {
+    nickname: string;
+}
 
 // Hashmap to cache user info
-const userCache: Record<string, Promise<any>> = {};
+const userCache: Record<string, Promise<User>> = {};
 
-function getUsers(uid: string[]): Promise<any>[] {
+function getUsers(uid: readonly string[]): PromiseLike<ArrayLike<User>> {
     const getUserInfo = httpsCallable(functions, "getUserInfo");
     const missingUids = uid.filter((id) => !userCache[id]);
     if (missingUids.length > 0) {
@@ -13,11 +18,10 @@ function getUsers(uid: string[]): Promise<any>[] {
             userCache[id] = promise.then((res) => (res.data as any[])[index]);
         });
     }
-    return uid.map((id) => userCache[id]);
+    return Promise.all(uid.map((id) => userCache[id]));
 }
 
-function getUser(uid: string): Promise<any> {
-    return getUsers([uid])[0];
-}
 
-export { getUsers, getUser };
+const userLoader = new DataLoader((keys: readonly string[]): PromiseLike<ArrayLike<User>> => getUsers(keys));
+
+export { userLoader };

@@ -4,18 +4,24 @@
 	import favicon from "$lib/assets/favicon.svg";
 	import { onMount } from "svelte";
 	import { getAuth } from "firebase/auth";
-	import InfiniteScroll from "@/components/InfiniteScroll.svelte";
-	import { getUsers } from "@/cache";
 	import { page } from "$app/state";
-    import { orderBy, where } from "firebase/firestore";
+	import InfiniteScroll from "@/components/InfiniteScroll.svelte";
+	import { userLoader } from "@/cache";
+	import { chat } from "@/chat.svelte";
+	import { derived } from "svelte/store";
 
 	let { children } = $props();
-	let loading = $state(true);
+	let userId = $state<string | null>(null);
+	let loading = $state(false);
+	let unsub: (() => void) | null = null;
 	onMount(() => {
 		const auth = getAuth();
 		const sub = auth.onAuthStateChanged((user) => {
+			userId = user?.uid ?? null;
+			if (unsub) unsub();
+			if (!userId) return;
+			unsub = chat.initializeChat(userId);
 			loading = false;
-			console.log(user?.uid);
 		});
 		return () => sub();
 	});
@@ -29,7 +35,7 @@
 	<div class="flex items-center justify-center min-h-screen">
 		<div class="loader">Loading...</div>
 	</div>
-{:else if getAuth().currentUser}
+{:else if userId}
 	<div class="min-h-screen bg-gray-100">
 		<div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
 			<div
@@ -59,35 +65,47 @@
 					<nav class="px-2 py-2 overflow-auto flex-1">
 						<ul class="space-y-1">
 							<InfiniteScroll
-								path="chats"
-								queryConstraints={[
-									where("members", "array-contains", getAuth().currentUser?.uid),
-								]}
-								orderBy={orderBy("lastUpdated", "desc")}
-								transform={(data) => {
-									const uids = data.map((item) => item.uid);
-									const users = getUsers(uids);
-									return data.map((item, index) => ({
-										...item,
-										user: users[index],
-									}));
-								}}
+								items={chat.conversations}
+								loadMore={chat.getMoreConversations}
 							>
 								{#snippet children(item)}
+									{@const data = item.data()}
+									{@const partnerId = data.members.find(
+										(uid: string) =>
+											uid !== getAuth().currentUser?.uid,
+									)}
 									<li>
 										<a
-											href={`/chats/${item.uid}`}
-											class={`w-full text-left px-3 py-3 rounded-md flex items-center gap-3 ${page?.url?.pathname === `/chats/${item.uid}` ? "bg-blue-50" : "hover:bg-gray-50"}`}
+											href={`/chats/${data.members.find(
+												(uid: string) =>
+													uid !==
+													getAuth().currentUser?.uid,
+											)}`}
+											class={`w-full text-left px-3 py-3 rounded-md flex items-center gap-3 ${
+												page?.url?.pathname ===
+												`/chats/${data.members.find(
+													(uid: string) =>
+														uid !==
+														getAuth().currentUser
+															?.uid,
+												)}`
+													? "bg-blue-50"
+													: "hover:bg-gray-50"
+											}`}
 											aria-current={page?.url
 												?.pathname ===
-											`/chats/${item.uid}`
+											`/chats/${data.members.find(
+												(uid: string) =>
+													uid !==
+													getAuth().currentUser?.uid,
+											)}`
 												? "page"
 												: undefined}
 										>
-											{#if item.avatarUrl}
+											{#if data.avatarUrl}
 												<img
-													src={item.avatarUrl}
-													alt={item.name}
+													src={data.avatarUrl}
+													alt={data.name}
 													class="w-10 h-10 rounded-full object-cover"
 												/>
 											{:else}
@@ -104,7 +122,7 @@
 													<span
 														class="font-medium truncate"
 													>
-														{#await item.user then user}
+														{#await userLoader.load(partnerId) then user}
 															{user.nickname}
 														{:catch}
 															Loading...
@@ -112,13 +130,13 @@
 													</span>
 													<span
 														class="text-xs text-gray-400"
-														>{item.lastUpdated}</span
+														>{data.lastUpdated}</span
 													>
 												</div>
 												<p
 													class="text-sm text-gray-500 truncate"
 												>
-													{item.lastMessage}
+													{data.lastMessage}
 												</p>
 											</div>
 										</a>
@@ -138,5 +156,7 @@
 		</div>
 	</div>
 {:else}
-	{@render children?.()}
+	<div class="flex items-center justify-center min-h-screen">
+		<div class="loader">Loading...</div>
+	</div>
 {/if}

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { page } from "$app/state";
-    import { getUser } from "@/cache.js";
+    import { userLoader } from "@/cache.js";
 
     const { children, data } = $props();
     const userId = $derived(page.params.id)!;
@@ -16,7 +16,7 @@
     />
     <div class="meta">
         <div class="username">
-            {#await getUser(userId) then user}
+            {#await userLoader.load(userId) then user}
                 {user.nickname}
             {:catch}
                 Loading...
