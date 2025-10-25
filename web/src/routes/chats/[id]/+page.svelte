@@ -1,5 +1,5 @@
 <script lang="ts">
-    import ChunkedInfiniteScroll from "@/components/ChunkedInfiniteScroll.svelte";
+    import ChunkedInfiniteScroll from "@/components/MessageList.svelte";
     import { httpsCallable } from "firebase/functions";
     import { functions } from "@/firebase.js";
     import { orderBy } from "firebase/firestore";
