@@ -10,10 +10,8 @@
         QueryDocumentSnapshot,
         startAfter,
         Query,
-        QuerySnapshot,
         type DocumentData,
         QueryOrderByConstraint,
-        getDoc,
         getDocs,
     } from "firebase/firestore";
     import { chat } from "@/chat.svelte";
@@ -35,7 +33,6 @@
     type Chunk = {
         query?: Query<DocumentData, DocumentData> | null;
         doc: QueryDocumentSnapshot<DocumentData, DocumentData>;
-        visible: boolean;
     };
     // newer chunks at the start of the array
     let chunks = $state<Chunk[]>([
@@ -45,7 +42,6 @@
                 id: null,
                 data: () => ({ items: [] }),
             } as unknown as QueryDocumentSnapshot<DocumentData, DocumentData>,
-            visible: true,
         },
     ]);
 
@@ -65,7 +61,6 @@
                         DocumentData,
                         DocumentData
                     >,
-                    visible: true,
                 });
             } else {
                 // update recent message chunk
@@ -78,7 +73,6 @@
                         DocumentData,
                         DocumentData
                     >,
-                    visible: true,
                 };
             }
             recentMessageSize = recentMessages.length;
@@ -99,7 +93,7 @@
             const result = await getDocs(q);
             const doc = result.docs;
             if (doc.length > 0) {
-                chunks = [...chunks, { query: q, doc: doc[0], visible: true }];
+                chunks = [...chunks, { query: q, doc: doc[0] }];
             }
         }
     }
@@ -154,7 +148,6 @@
                         const chunk = {
                             query: null,
                             doc: doc,
-                            visible: true,
                         };
                         chunks[1] = chunk; // insert after recentMessages chunk
                     }
