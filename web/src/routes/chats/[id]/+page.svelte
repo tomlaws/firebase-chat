@@ -27,7 +27,7 @@
 <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
     {#if userId}
     {#key chatId}
-        <ChunkedInfiniteScroll {path} orderBy={orderBy("__name__", "desc")}>
+        <ChunkedInfiniteScroll chatId={chatId!} orderBy={orderBy("__name__", "desc")}>
             {#snippet children(item)}
                 <div
                     class="flex py-2 px-4"

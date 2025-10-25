@@ -29,7 +29,8 @@ export const chat = createChat();
 export function createChat() {
     let currentUid = $state<string>();
     let conversations = $state<Array<QueryDocumentSnapshot<DocumentData, DocumentData>>>([]);
-
+    let recentMessagesMap = $state<Record<string, any[]>>({});
+    
     function initializeChat(uid: string): Unsubscribe {
         currentUid = uid;
         const q = query(
@@ -48,6 +49,8 @@ export function createChat() {
                 } else {
                     conversations.push(doc);
                 }
+                const recentMessages = doc.data().recentMessages || [];
+                recentMessagesMap[doc.id] = recentMessages;
             }
             conversations.sort(
                 (a, b) =>
@@ -77,6 +80,8 @@ export function createChat() {
             } else {
                 conversations.push(doc);
             }
+            const recentMessages = doc.data().recentMessages || [];
+            recentMessagesMap[doc.id] = recentMessages;
         }
         conversations.sort(
             (a, b) =>
@@ -88,11 +93,21 @@ export function createChat() {
         return currentUid;
     }
 
+    function getRecentMessages(chatId: string) {
+        return recentMessagesMap[chatId] || [];
+    }
+
     return {
         getUid,
         conversations,
         initializeChat,
-        getMoreConversations
+        getMoreConversations,
+        getRecentMessages
     }
 }
 
+// export function createArchiveMessages(chatId: string) {
+//     let messages = $state<Record<string, Array<QueryDocumentSnapshot<DocumentData, DocumentData>>>>({});
+
+    
+// }

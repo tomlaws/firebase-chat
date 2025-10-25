@@ -38,7 +38,7 @@ setGlobalOptions({ maxInstances: 10 });
 admin.initializeApp();
 const db = getFirestore();
 
-const chunkLimit = 10000000; // 10MB
+const chunkLimit = 300; // 10000000 = 10MB
 export const sendMessage = onCall(async (request) => {
     const uid = request.auth?.uid;
 
@@ -75,34 +75,27 @@ export const sendMessage = onCall(async (request) => {
     const chatDoc = await db.collection('chats').doc(chatId).get();
     const data = chatDoc.exists ? chatDoc.data() : null;
 
-    let lastChunkId = uuidv7();
-    let lastChunkSize: FieldValue | number = FieldValue.increment(messageSize);
-
     if (data) {
-        const existingLastChunkId = data.lastChunkId as string | undefined;
-        const existingBytes = Number(data.lastChunkSize || 0);
-
-        if (existingLastChunkId) lastChunkId = existingLastChunkId;
-
-        // If adding this message would exceed the threshold, start a new chunk.
+        const existingBytes = Number(data.messageBytes || 0);
+        // If adding this message would exceed the threshold, archive recentMessages
         if (existingBytes + messageSize > chunkLimit * 0.8) {
-            lastChunkId = uuidv7();
-            // For a new chunk we should initialize the byte count to this message's size.
-            lastChunkSize = messageSize;
+            const messagesToBeRemoved = data.recentMessages || [];
+            await chatDoc.ref.update({
+                recentMessages: FieldValue.arrayRemove(...messagesToBeRemoved),
+                messageBytes: FieldValue.increment(-existingBytes)
+            });
+            // Create a new chunk document for recentMessages
+            const chunkId = uuidv7();
+            await db.collection('chats').doc(chatId)
+                .collection('messages').doc(chunkId).set({
+                    items: messagesToBeRemoved,
+                });
         }
     }
-
     await chatDoc.ref.set({
-        lastChunkId,
-        lastChunkSize,
+        messageBytes: FieldValue.increment(messageSize),
+        recentMessages: FieldValue.arrayUnion(message)
     }, { merge: true });
-
-    const messageChunk = db.collection('chats').doc(chatId).collection('messages').doc(lastChunkId);
-
-    await messageChunk.set({
-        items: FieldValue.arrayUnion(message),
-    }, { merge: true });
-
     return { success: true, message };
 });
 

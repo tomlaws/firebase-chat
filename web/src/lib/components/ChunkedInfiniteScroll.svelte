@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount, type SvelteComponent } from "svelte";
+    import { onMount, untrack, type SvelteComponent } from "svelte";
     import {
         onSnapshot,
         query,
@@ -14,44 +14,88 @@
         type DocumentData,
         QueryOrderByConstraint,
     } from "firebase/firestore";
+    import { chat } from "@/chat.svelte";
 
     let {
         children,
-        path,
+        chatId,
         queryConstraints = [],
         orderBy,
         transform,
     } = $props<{
         children?: (item: any) => SvelteComponent;
-        path: string;
+        chatId: string;
         queryConstraints?: QueryConstraint[];
         orderBy: QueryOrderByConstraint;
         transform?: (data: any[]) => any[];
     }>();
-
+    let path = $derived(`chats/${chatId}/messages`);
     type Chunk = {
         query?: Query<DocumentData, DocumentData> | null;
         doc: QueryDocumentSnapshot<DocumentData, DocumentData>;
         visible: boolean;
     };
-    let chunks = $state<Chunk[]>([]);
-    let initialized = $state(false);
+    // newer chunks at the start of the array
+    let chunks = $state<Chunk[]>([
+        {
+            query: undefined,
+            doc: {
+                id: null,
+                data: () => ({ items: [] }),
+            } as unknown as QueryDocumentSnapshot<DocumentData, DocumentData>,
+            visible: true,
+        },
+    ]);
     const observers = new Map<
-        Query<DocumentData, DocumentData>,
+        Query<DocumentData, DocumentData>  | null | undefined,
         IntersectionObserver
     >();
     const unsubscribers = new Map<
         Query<DocumentData, DocumentData>,
         () => void
     >();
-
+    $inspect(chunks);
+    let recentMessageSize = 0;
+    $effect(() => {
+        const recentMessages = chat.getRecentMessages(chatId) ?? [];
+        console.log("Recent messages updated:", JSON.stringify(recentMessages));
+        untrack(() => {
+            if (recentMessages.length < recentMessageSize) {
+                // insert new chunk for recentMessages
+                chunks.unshift({
+                    query: undefined,
+                    doc: {
+                        id: "recent",
+                        data: () => ({ items: recentMessages }),
+                    } as unknown as QueryDocumentSnapshot<
+                        DocumentData,
+                        DocumentData
+                    >,
+                    visible: true,
+                });
+            } else {
+                // update recent message chunk
+                chunks[0] = {
+                    query: undefined,
+                    doc: {
+                        id: "recent",
+                        data: () => ({ items: recentMessages }),
+                    } as unknown as QueryDocumentSnapshot<
+                        DocumentData,
+                        DocumentData
+                    >,
+                    visible: true,
+                };
+            }
+            recentMessageSize = recentMessages.length;
+        });
+    });
     function subscribeQuery(query: Query<DocumentData, DocumentData>) {
         if (!query || unsubscribers.has(query)) return;
         const unsubscribe = onSnapshot(
             query,
             (snapshot: QuerySnapshot<DocumentData, DocumentData>) => {
                 for (const doc of snapshot.docs) {
-                    // const data = doc.data();
                     // check if chunk already exists
                     if (chunks.find((c) => c.doc.id === doc.id)) {
                         // replace existing chunk
@@ -89,7 +133,7 @@
     }
 
     function observeChunk(node: Element, chunk: Chunk) {
-        if (!chunk || !chunk.query) return;
+        if (!chunk) return;
         const observer = new IntersectionObserver(
             ([entry]) => {
                 chunk.visible = entry.isIntersecting;
@@ -119,6 +163,7 @@
         const observer = new IntersectionObserver(([entry]) => {
             console.log("Scroll end observed:", path);
             if (entry.isIntersecting) {
+                listenForNewChunks();
                 const oldest = chunks[chunks.length - 1];
                 if (oldest) {
                     const q = query(
@@ -142,12 +187,14 @@
 
     function getChunkItems(chunk: Chunk) {
         const data = chunk.doc.data();
-        return transform ? transform(data.items ?? []) : data.items ?? [];
-
+        return transform ? transform(data.items ?? []) : (data.items ?? []);
     }
 
-    onMount(() => {
-        const unsubscribe = onSnapshot(
+    let unsubscriberListenNewChunks: (() => void) | null = null;
+    function listenForNewChunks() {
+        if (unsubscriberListenNewChunks) return;
+        console.log("Listening for new chunks on path:", path);
+        unsubscriberListenNewChunks = onSnapshot(
             query(
                 collection(getFirestore(), path),
                 ...queryConstraints,
@@ -166,7 +213,6 @@
                         chunks = updated;
                     } else {
                         console.log("New chunk detected:", doc.id);
-                        // new chunk is created, subscribe back the previous chunk
                         subscribeQuery(
                             query(
                                 collection(getFirestore(), path),
@@ -182,14 +228,16 @@
                             doc: doc,
                             visible: true,
                         };
-                        chunks = [...chunks, chunk];
+                        chunks[1] = chunk; // insert after recentMessages chunk
                     }
                 });
-                initialized = true;
             },
         );
+    }
+
+    onMount(() => {
         return () => {
-            unsubscribe();
+            unsubscriberListenNewChunks?.();
             observers.forEach((observer) => observer.disconnect());
             unsubscribers.forEach((unsub) => unsub());
         };
@@ -197,18 +245,21 @@
 </script>
 
 <div class="overflow-y-auto flex-1 flex flex-col flex-col-reverse min-h-0">
+    <!-- <div>
+        {#each recentMessages as item}
+            {@render children?.(item)}
+        {/each}
+    </div> -->
     {#each chunks as chunk}
-        <div use:observeChunk={chunk} class="item">
+        <div class="item">
             {#each getChunkItems(chunk) as item}
                 {@render children?.(item)}
             {/each}
         </div>
     {/each}
-    {#if initialized}
-        {#key chunks.length}
-            <div use:observeScrollEnd class="scroll-trigger"></div>
-        {/key}
-    {/if}
+    {#key chunks.length}
+        <div use:observeScrollEnd class="scroll-trigger"></div>
+    {/key}
 </div>
 
 <!-- {#if loading}
