@@ -21,8 +21,20 @@
             return;
         }
 
+       const unsub = auth.onAuthStateChanged((user) => {
+            if (user) {
+                goto('/');
+            }
+        });
+
         // Initialize reCAPTCHA
         setupRecaptcha();
+        return () => {
+            unsub();
+            if (recaptchaVerifier) {
+                recaptchaVerifier.clear();
+            }
+        };
     });
 
     function setupRecaptcha() {
