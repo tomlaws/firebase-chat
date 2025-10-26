@@ -105,9 +105,3 @@ export function createChat() {
         getRecentMessages
     }
 }
-
-// export function createArchiveMessages(chatId: string) {
-//     let messages = $state<Record<string, Array<QueryDocumentSnapshot<DocumentData, DocumentData>>>>({});
-
-    
-// }

@@ -4,6 +4,7 @@
     import { functions } from "@/firebase.js";
     import { orderBy } from "firebase/firestore";
     import { chat } from "@/chat.svelte.js";
+    import { formatTimestamp } from "@/utils.js";
 
     const { data } = $props();
     const id = $derived(data.id);
@@ -44,10 +45,7 @@
                                 ? "text-xs text-blue-100/90 block text-right mt-2"
                                 : "text-xs text-gray-500 block mt-1"}
                         >
-                            {item.timestamp?.toDate().toLocaleTimeString([], {
-                                hour: "numeric",
-                                minute: "2-digit",
-                            })}
+                            {formatTimestamp(item.timestamp)}
                         </span>
                     </div>
                 </div>

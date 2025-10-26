@@ -7,80 +7,38 @@
     const AVATAR_FALLBACK = "/default-avatar.png";
 </script>
 
-<header class="header" role="banner">
-    <img
-        class="avatar"
-        src={AVATAR_FALLBACK}
-        alt={"Conversation avatar"}
-        loading="lazy"
-    />
-    <div class="meta">
-        <div class="username">
+<header
+    class="h-16 flex items-center gap-3 px-4 py-2 shadow-xs border-b border-gray-200"
+>
+    {#if false}
+        <img
+            class="w-12 h-12 rounded-full object-cover flex-shrink-0 bg-gray-200"
+            alt={""}
+            loading="lazy"
+        />
+    {:else}
+        <div
+            class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm text-gray-600"
+        >
+            &#128100;
+        </div>
+    {/if}
+    <div class="flex flex-col justify-center overflow-hidden">
+        <div
+            class="font-semibold text-base whitespace-nowrap text-ellipsis overflow-hidden"
+        >
             {#await userLoader.load(userId) then user}
                 {user.nickname}
             {:catch}
                 Loading...
             {/await}
         </div>
-        <div class="lastseen">last seen</div>
+        <div
+            class="text-sm text-gray-500 mt-0.5 whitespace-nowrap text-ellipsis overflow-hidden"
+        >
+            last seen
+        </div>
     </div>
 </header>
 
 {@render children?.()}
-
-<style>
-    :global(body) {
-        margin: 0;
-    }
-
-    .header {
-        height: 64px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 8px 16px;
-        background: var(--surface, #fff);
-        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-        z-index: 20;
-        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
-    }
-
-    .avatar {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        object-fit: cover;
-        flex: 0 0 48px;
-        background: #eee;
-    }
-
-    .meta {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        overflow: hidden;
-    }
-
-    .username {
-        font-weight: 600;
-        font-size: 1rem;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
-    }
-
-    .lastseen {
-        font-size: 0.85rem;
-        color: #6b7280; /* gray */
-        margin-top: 2px;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
-    }
-
-    /* content sits below the fixed header */
-    .content {
-        padding-top: 64px; /* same as header height */
-        min-height: calc(100vh - 64px);
-    }
-</style>

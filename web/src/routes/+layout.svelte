@@ -8,7 +8,9 @@
 	import InfiniteScroll from "@/components/InfiniteScroll.svelte";
 	import { userLoader } from "@/cache";
 	import { chat } from "@/chat.svelte";
-
+	import { formatTimestamp } from "@/utils";
+	import Icon from "@iconify/svelte";
+	
 	let { children } = $props();
 	let loading = $state(false);
 	let unsub: (() => void) | null = null;
@@ -33,7 +35,7 @@
 	<div class="flex items-center justify-center min-h-screen">
 		<div class="loader">Loading...</div>
 	</div>
-{:else}
+{:else if chat.getUid()}
 	<div class="min-h-screen bg-gray-100">
 		<div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
 			<div
@@ -43,21 +45,24 @@
 				<aside
 					class="w-80 border-r border-gray-200 flex flex-col bg-white"
 				>
-					<div class="p-4">
+					<div
+						class="h-16 px-4 flex flex-col justify-center shadow-xs border-b border-gray-200"
+					>
 						<div class="flex items-center gap-3">
 							<h2 class="text-lg font-semibold">Chats</h2>
 							<button
-								class="ml-auto text-sm text-blue-600 hover:underline"
-								>New</button
+								class="ml-auto text-sm text-blue-600 hover:underline px-2 py-2 rounded-full hover:bg-blue-50"
 							>
+								<Icon icon="uil:plus" width="24" height="24" />
+							</button>
 						</div>
-						<div class="mt-3">
+						<!-- <div class="mt-3">
 							<input
 								type="search"
 								placeholder="Search conversations"
 								class="w-full px-3 py-2 rounded-md bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
 							/>
-						</div>
+						</div> -->
 					</div>
 
 					<nav class="px-2 py-2 overflow-auto flex-1">
@@ -74,29 +79,16 @@
 									)}
 									<li>
 										<a
-											href={`/chats/${data.members.find(
-												(uid: string) =>
-													uid !==
-													getAuth().currentUser?.uid,
-											)}`}
+											href={`/chats/${partnerId}`}
 											class={`w-full text-left px-3 py-3 rounded-md flex items-center gap-3 ${
 												page?.url?.pathname ===
-												`/chats/${data.members.find(
-													(uid: string) =>
-														uid !==
-														getAuth().currentUser
-															?.uid,
-												)}`
+												`/chats/${partnerId}`
 													? "bg-blue-50"
 													: "hover:bg-gray-50"
 											}`}
 											aria-current={page?.url
 												?.pathname ===
-											`/chats/${data.members.find(
-												(uid: string) =>
-													uid !==
-													getAuth().currentUser?.uid,
-											)}`
+											`/chats/${partnerId}`
 												? "page"
 												: undefined}
 										>
@@ -128,13 +120,27 @@
 													</span>
 													<span
 														class="text-xs text-gray-400"
-														>{data.lastUpdated}</span
-													>
+														>{data.recentMessages
+															?.length
+															? formatTimestamp(
+																	data
+																		.recentMessages[
+																		data
+																			.recentMessages
+																			.length -
+																			1
+																	].timestamp,
+																)
+															: ""}
+													</span>
 												</div>
 												<p
 													class="text-sm text-gray-500 truncate"
 												>
-													{data.lastMessage}
+													{data.recentMessages?.[
+														data.recentMessages
+															.length - 1
+													]?.text ?? ""}
 												</p>
 											</div>
 										</a>
@@ -153,4 +159,6 @@
 			</div>
 		</div>
 	</div>
+{:else}
+	{@render children?.()}
 {/if}
