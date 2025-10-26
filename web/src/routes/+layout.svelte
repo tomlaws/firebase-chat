@@ -2,7 +2,7 @@
 	import "../app.css";
 	import "$lib/firebase";
 	import favicon from "$lib/assets/favicon.svg";
-	import { onMount } from "svelte";
+	import { onMount, tick } from "svelte";
 	import { getAuth } from "firebase/auth";
 	import { page } from "$app/state";
 	import InfiniteScroll from "@/components/InfiniteScroll.svelte";
@@ -10,9 +10,10 @@
 	import { chat } from "@/chat.svelte";
 	import { formatTimestamp } from "@/utils";
 	import Icon from "@iconify/svelte";
-	
+
 	let { children } = $props();
-	let loading = $state(false);
+	let loading = $state(true);
+	let searchQuery = $state<String>();
 	let unsub: (() => void) | null = null;
 	onMount(() => {
 		const auth = getAuth();
@@ -33,7 +34,19 @@
 
 {#if loading}
 	<div class="flex items-center justify-center min-h-screen">
-		<div class="loader">Loading...</div>
+		<div role="status" class="flex flex-col items-center gap-6">
+			<div class="flex flex-col items-center gap-6" aria-live="polite" aria-busy="true">
+				<div class="flex items-center gap-4">
+					<div class="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center shadow-lg">
+						<Icon icon="mdi:chat-processing" class="w-10 h-10 text-white animate-spin" />
+					</div>
+					<div class="text-left">
+						<h3 class="text-xl font-semibold">Starting chats…</h3>
+						<p class="text-sm text-gray-400">Connecting securely and loading your conversations</p>
+					</div>
+				</div>
+			</div>
+		</div>
 	</div>
 {:else if chat.getUid()}
 	<div class="min-h-screen bg-gray-100">
@@ -49,12 +62,30 @@
 						class="h-16 px-4 flex flex-col justify-center shadow-xs border-b border-gray-200"
 					>
 						<div class="flex items-center gap-3">
-							<h2 class="text-lg font-semibold">Chats</h2>
-							<button
-								class="ml-auto text-sm text-blue-600 hover:underline px-2 py-2 rounded-full hover:bg-blue-50"
-							>
-								<Icon icon="uil:plus" width="24" height="24" />
-							</button>
+							{#if searchQuery !== undefined}
+								<button onclick={() => (searchQuery = undefined)} class="p-2 rounded-md hover:bg-gray-100">
+									<Icon icon="mdi:arrow-left" class="w-5 h-5" />
+								</button>
+								<input
+									type="text"
+									bind:value={searchQuery}
+									placeholder="Search user"
+									autofocus
+									class="ml-1 flex-1 px-3 py-2 rounded-md border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400"
+								/>
+							{:else}
+								<h2 class="text-lg font-semibold">Chats</h2>
+								<button
+									onclick={() => (searchQuery = "")}
+									class="ml-auto text-sm text-blue-600 hover:underline px-2 py-2 rounded-full hover:bg-blue-50"
+								>
+									<Icon
+										icon="uil:plus"
+										width="24"
+										height="24"
+									/>
+								</button>
+							{/if}
 						</div>
 						<!-- <div class="mt-3">
 							<input
@@ -86,6 +117,9 @@
 													? "bg-blue-50"
 													: "hover:bg-gray-50"
 											}`}
+											onclick={(e) => {
+												searchQuery = undefined;
+											}}
 											aria-current={page?.url
 												?.pathname ===
 											`/chats/${partnerId}`
@@ -113,7 +147,7 @@
 														class="font-medium truncate"
 													>
 														{#await userLoader.load(partnerId) then user}
-															{user.nickname}
+															{user.name}
 														{:catch}
 															Loading...
 														{/await}

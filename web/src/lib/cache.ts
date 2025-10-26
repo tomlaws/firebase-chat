@@ -3,7 +3,7 @@ import { functions } from "./firebase";
 import DataLoader from "dataloader";
 
 export type User = {
-    nickname: string;
+    name: string;
 }
 
 // Hashmap to cache user info

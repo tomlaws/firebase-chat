@@ -28,7 +28,7 @@
             class="font-semibold text-base whitespace-nowrap text-ellipsis overflow-hidden"
         >
             {#await userLoader.load(userId) then user}
-                {user.nickname}
+                {user.name}
             {:catch}
                 Loading...
             {/await}
