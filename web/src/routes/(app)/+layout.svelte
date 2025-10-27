@@ -47,21 +47,24 @@
 					>
 						<div class="flex items-center gap-3">
 							{#if searchQuery !== undefined}
-								<button onclick={() => (searchQuery = undefined)} class="p-2 rounded-md hover:bg-gray-100">
+								<button onclick={() => (searchQuery = undefined)} class="p-2 cursor-pointer rounded-md hover:bg-gray-100">
 									<Icon icon="mdi:arrow-left" class="w-5 h-5" />
 								</button>
 								<input
 									type="text"
+									name="search"
 									bind:value={searchQuery}
 									placeholder="Search user"
 									autofocus
+									autocomplete="off"
+									aria-autocomplete="none"
 									class="ml-1 flex-1 px-3 py-2 rounded-md border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400"
 								/>
 							{:else}
 								<h2 class="text-lg font-semibold">Chats</h2>
 								<button
 									onclick={() => (searchQuery = "")}
-									class="ml-auto text-sm text-blue-600 hover:underline px-2 py-2 rounded-full hover:bg-blue-50"
+									class="cursor-pointer ml-auto text-sm text-blue-600 hover:underline px-2 py-2 rounded-full hover:bg-blue-50"
 								>
 									<Icon
 										icon="uil:plus"
@@ -113,7 +116,7 @@
 											{#if data.avatarUrl}
 												<img
 													src={data.avatarUrl}
-													alt={data.name}
+													alt={data.displayName}
 													class="w-10 h-10 rounded-full object-cover"
 												/>
 											{:else}
@@ -128,10 +131,10 @@
 													class="flex justify-between items-center"
 												>
 													<span
-														class="font-medium truncate"
+														class="font-medium truncate h-6"
 													>
 														{#await userLoader.load(partnerId) then user}
-															{user.name}
+															{user.displayName}
 														{:catch}
 															Loading...
 														{/await}

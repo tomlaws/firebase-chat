@@ -21,7 +21,8 @@ export type Conversation = {
     updatedAt: Timestamp;
     recentMessages: QueryDocumentSnapshot<DocumentData, DocumentData>[];
     user: Promise<{
-        nickname: string;
+        username: string;
+        displayName: string;
     }>;
 };
 export const chat = createChat();

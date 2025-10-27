@@ -25,10 +25,10 @@
     {/if}
     <div class="flex flex-col justify-center overflow-hidden">
         <div
-            class="font-semibold text-base whitespace-nowrap text-ellipsis overflow-hidden"
+            class="font-semibold text-base whitespace-nowrap text-ellipsis overflow-hidden h-6"
         >
             {#await userLoader.load(userId) then user}
-                {user.name}
+                {user.displayName}
             {:catch}
                 Loading...
             {/await}

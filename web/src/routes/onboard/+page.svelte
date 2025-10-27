@@ -41,7 +41,6 @@
         });
         return () => sub();
     });
-    
 </script>
 
 <!-- <div
@@ -130,6 +129,7 @@
                     oninput={() => (username = username.toLowerCase())}
                     bind:value={username}
                     autocomplete="off"
+                    aria-autocomplete="none"
                     required
                     maxlength="20"
                     minlength="3"
@@ -157,6 +157,7 @@
                     placeholder=" "
                     bind:value={displayName}
                     autocomplete="off"
+                    aria-autocomplete="none"
                     required
                     maxlength="30"
                     minlength="1"
