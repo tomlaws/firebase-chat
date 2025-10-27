@@ -142,29 +142,30 @@
     <title>Sign In - Firebase Chat</title>
 </svelte:head>
 
-<div class="login-container">
-    <div class="login-card">
-        <h1>Welcome to Firebase Chat</h1>
-        <p class="subtitle">Sign in with your phone number</p>
+<div class="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
+    <div class="w-full max-w-lg bg-white border border-white/6 rounded-xl p-8 shadow-lg backdrop-blur-sm">
+        <h1 class="text-center text-gray-800 mb-2 text-2xl font-semibold">Welcome!</h1>
+        <p class="text-center text-gray-500 mb-6 text-sm">Sign in with your phone number</p>
         
         {#if step === 'phone'}
-            <form onsubmit={handlePhoneSubmit} class="form">
-                <div class="input-group">
-                    <label for="phone">Phone Number</label>
+            <form on:submit={handlePhoneSubmit} class="flex flex-col space-y-6">
+                <div class="flex flex-col space-y-2">
+                    <label for="phone" class="font-medium text-gray-700 text-sm">Phone Number</label>
                     <input 
                         id="phone"
                         type="tel" 
                         bind:value={phoneNumber} 
                         placeholder="+1 234 567 8900" 
+                        class="p-3 border-2 border-gray-200 rounded-lg text-base focus:outline-none focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                         disabled={loading}
                         required 
                     />
-                    <small>Include country code (e.g., +1 for US)</small>
+                    <small class="text-gray-500 text-xs">Include country code (e.g., +1 for US)</small>
                 </div>
                 
-                <div id="recaptcha-container"></div>
+                <div id="recaptcha-container" class="my-4 flex justify-center"></div>
                 
-                <button type="submit" class="btn-primary" disabled={loading}>
+                <button type="submit" class="px-6 py-3 rounded-lg text-white cursor-pointer bg-blue-600 hover:bg-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition" disabled={loading}>
                     {#if loading}
                         Sending...
                     {:else}
@@ -173,26 +174,27 @@
                 </button>
             </form>
         {:else if step === 'verification'}
-            <form onsubmit={handleCodeSubmit} class="form">
-                <div class="input-group">
-                    <label for="code">Verification Code</label>
+            <form on:submit={handleCodeSubmit} class="flex flex-col space-y-6">
+                <div class="flex flex-col space-y-2">
+                    <label for="code" class="font-medium text-gray-700 text-sm">Verification Code</label>
                     <input 
                         id="code"
                         type="text" 
                         bind:value={verificationCode} 
                         placeholder="123456" 
+                        class="p-3 border-2 border-gray-200 rounded-lg text-base focus:outline-none focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                         disabled={loading}
                         maxlength="6"
                         required 
                     />
-                    <small>Enter the 6-digit code sent to {phoneNumber}</small>
+                    <small class="text-gray-500 text-xs">Enter the 6-digit code sent to {phoneNumber}</small>
                 </div>
                 
-                <div class="button-group">
-                    <button type="button" class="btn-secondary" onclick={goBack} disabled={loading}>
+                <div class="flex gap-4">
+                    <button type="button" class="flex-1 px-6 py-3 rounded-lg bg-gray-100 text-gray-800 border border-gray-200 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed" on:click={goBack} disabled={loading}>
                         Back
                     </button>
-                    <button type="submit" class="btn-primary" disabled={loading}>
+                    <button type="submit" class="flex-2 px-6 py-3 rounded-lg text-white bg-blue-600 hover:bg-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition" disabled={loading}>
                         {#if loading}
                             Verifying...
                         {:else}
@@ -204,164 +206,9 @@
         {/if}
         
         {#if error}
-            <div class="error" role="alert">
+            <div class="bg-red-50 text-red-700 p-3 rounded-lg border-red-600 text-sm mt-4" role="alert">
                 {error}
             </div>
         {/if}
     </div>
 </div>
-
-<style>
-    .login-container {
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 1rem;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    
-    .login-card {
-        background: white;
-        border-radius: 12px;
-        padding: 2rem;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        width: 100%;
-        max-width: 400px;
-    }
-    
-    h1 {
-        text-align: center;
-        color: #333;
-        margin-bottom: 0.5rem;
-        font-size: 1.75rem;
-        font-weight: 600;
-    }
-    
-    .subtitle {
-        text-align: center;
-        color: #666;
-        margin-bottom: 2rem;
-        font-size: 0.9rem;
-    }
-    
-    .form {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-    }
-    
-    .input-group {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    
-    label {
-        font-weight: 500;
-        color: #333;
-        font-size: 0.9rem;
-    }
-    
-    input {
-        padding: 0.75rem;
-        border: 2px solid #e1e5e9;
-        border-radius: 8px;
-        font-size: 1rem;
-        transition: border-color 0.2s ease;
-    }
-    
-    input:focus {
-        outline: none;
-        border-color: #667eea;
-    }
-    
-    input:disabled {
-        background-color: #f5f5f5;
-        cursor: not-allowed;
-    }
-    
-    small {
-        color: #666;
-        font-size: 0.8rem;
-    }
-    
-    .btn-primary, .btn-secondary {
-        padding: 0.75rem 1.5rem;
-        border: none;
-        border-radius: 8px;
-        font-size: 1rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        text-align: center;
-    }
-    
-    .btn-primary {
-        background: #667eea;
-        color: white;
-    }
-    
-    .btn-primary:hover:not(:disabled) {
-        background: #5a6fd8;
-        transform: translateY(-1px);
-    }
-    
-    .btn-primary:disabled {
-        background: #ccc;
-        cursor: not-allowed;
-        transform: none;
-    }
-    
-    .btn-secondary {
-        background: #f8f9fa;
-        color: #333;
-        border: 2px solid #e1e5e9;
-    }
-    
-    .btn-secondary:hover:not(:disabled) {
-        background: #e9ecef;
-    }
-    
-    .button-group {
-        display: flex;
-        gap: 1rem;
-    }
-    
-    .button-group .btn-secondary {
-        flex: 1;
-    }
-    
-    .button-group .btn-primary {
-        flex: 2;
-    }
-    
-    .error {
-        background: #fee;
-        color: #c33;
-        padding: 0.75rem;
-        border-radius: 8px;
-        border-left: 4px solid #c33;
-        font-size: 0.9rem;
-    }
-    
-    :global(#recaptcha-container) {
-        margin: 1rem 0;
-        display: flex;
-        justify-content: center;
-    }
-    
-    @media (max-width: 480px) {
-        .login-card {
-            padding: 1.5rem;
-        }
-        
-        h1 {
-            font-size: 1.5rem;
-        }
-        
-        .button-group {
-            flex-direction: column;
-        }
-    }
-</style>

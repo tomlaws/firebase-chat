@@ -8,6 +8,7 @@
 	import { chat } from "@/chat.svelte";
 	import { formatTimestamp } from "@/utils";
 	import Icon from "@iconify/svelte";
+    import Loader from "@/components/Loader.svelte";
 
 	let { children } = $props();
 	let loading = $state(true);
@@ -17,7 +18,10 @@
 		const auth = getAuth();
 		const sub = auth.onAuthStateChanged((user) => {
 			if (unsub) unsub();
-			if (!user) return;
+			if (!user) {
+                window.location.href = "/login";
+                return;
+			}
 			console.log("Initializing chat for user:", user.uid);
 			unsub = chat.initializeChat(user.uid);
 			loading = false;
@@ -27,21 +31,7 @@
 </script>
 
 {#if loading}
-	<div class="flex items-center justify-center min-h-screen">
-		<div role="status" class="flex flex-col items-center gap-6">
-			<div class="flex flex-col items-center gap-6" aria-live="polite" aria-busy="true">
-				<div class="flex items-center gap-4">
-					<div class="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center shadow-lg">
-						<Icon icon="mdi:chat-processing" class="w-10 h-10 text-white animate-spin" />
-					</div>
-					<div class="text-left">
-						<h3 class="text-xl font-semibold">Starting chats…</h3>
-						<p class="text-sm text-gray-400">Connecting securely and loading your conversations</p>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
+	<Loader />
 {:else if chat.getUid()}
 	<div class="min-h-screen bg-gray-100">
 		<div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">

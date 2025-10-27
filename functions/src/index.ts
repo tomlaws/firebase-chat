@@ -114,13 +114,53 @@ export const getUserInfo = onCall(async (request) => {
     }
 
     const users = await Promise.all(uid.map(async (uid: string) => {
-        console.log(`users/${uid}`);
-        const userDoc = await db.collection('users').doc(uid).get();
-        if (!userDoc.exists) {
-            return { uid, nickname: 'Unknown' };
+        const [userDoc, user] = await Promise.all([db.collection('users').doc(uid).get(), admin.auth().getUser(uid)]);
+        let username = null;
+        let displayName = null;
+        if (userDoc.exists) {
+            const data = userDoc.data();
+            username = data?.username || null;
+            displayName = user.displayName || null;
         }
-        return userDoc.data();
+        return { uid, username, displayName };
     }));
 
     return users;
+});
+
+export const onboardUser = onCall(async (request) => {
+    const uid = request.auth?.uid;
+
+    console.log('Onboarding user:', uid);
+    if (!uid) {
+        throw new Error('Authentication required');
+    }
+
+    const { username, displayName } = request.data;
+    if (!username || typeof username !== 'string' || username.length > 24) {
+        throw new Error('Invalid username');
+    }
+
+    // Validate username
+    const usernameRegex = /^[a-zA-Z0-9_]+$/;
+    if (!usernameRegex.test(username)) {
+        throw new Error('Username can only contain letters, numbers, and underscores');
+    }
+
+    // Store user info in Firestore
+    await db.collection('users').doc(uid).set({
+        uid,
+        username,
+        createdAt: new Date(),
+    }, { merge: true });
+
+    // Update Firebase Auth display name
+    await admin.auth().updateUser(uid, {
+        displayName: displayName || undefined,
+    });
+
+    // Update custom claims
+    await admin.auth().setCustomUserClaims(uid, { username });
+
+    return { success: true };
 });
