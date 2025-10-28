@@ -31,7 +31,7 @@
     });
 </script>
 
-<div class="overflow-y-auto flex-1 flex flex-col flex-col-reverse min-h-0">
+<div class="overflow-y-auto flex-1 flex flex-col min-h-0">
     {#each items as item}
         <!-- {#each getItem(item) as transformedItem} -->
         {@render children?.(item)}

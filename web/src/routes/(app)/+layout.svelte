@@ -8,19 +8,23 @@
 	import { chat } from "@/chat.svelte";
 	import { formatTimestamp } from "@/utils";
 	import Icon from "@iconify/svelte";
-    import Loader from "@/components/Loader.svelte";
+	import Loader from "@/components/Loader.svelte";
+	import { httpsCallable } from "firebase/functions";
+	import { functions } from "$lib/firebase";
 
 	let { children } = $props();
 	let loading = $state(true);
 	let searchQuery = $state<String>();
+	let searchResults: Array<any> = $state([]);
+
 	let unsub: (() => void) | null = null;
 	onMount(() => {
 		const auth = getAuth();
 		const sub = auth.onAuthStateChanged((user) => {
 			if (unsub) unsub();
 			if (!user) {
-                window.location.href = "/login";
-                return;
+				window.location.href = "/login";
+				return;
 			}
 			console.log("Initializing chat for user:", user.uid);
 			unsub = chat.initializeChat(user.uid);
@@ -28,6 +32,23 @@
 		});
 		return () => sub();
 	});
+
+	async function onSearchQueryChange() {
+		if (typeof searchQuery !== "string") {
+			return;
+		}
+		const trimmed = searchQuery.trim().toLowerCase();
+		// length check
+		if (trimmed.length < 3 || trimmed.length > 24) {
+			return;
+		}
+		const searchUsersByUsername = httpsCallable(
+			functions,
+			"searchUsersByUsername",
+		);
+		const result = await searchUsersByUsername({ username: trimmed });
+		searchResults = result.data as any;
+	}
 </script>
 
 {#if loading}
@@ -47,14 +68,21 @@
 					>
 						<div class="flex items-center gap-3">
 							{#if searchQuery !== undefined}
-								<button onclick={() => (searchQuery = undefined)} class="p-2 cursor-pointer rounded-md hover:bg-gray-100">
-									<Icon icon="mdi:arrow-left" class="w-5 h-5" />
+								<button
+									onclick={() => (searchQuery = undefined)}
+									class="p-2 cursor-pointer rounded-md hover:bg-gray-100"
+								>
+									<Icon
+										icon="mdi:arrow-left"
+										class="w-5 h-5"
+									/>
 								</button>
 								<input
 									type="text"
 									name="search"
 									bind:value={searchQuery}
-									placeholder="Search user"
+									oninput={onSearchQueryChange}
+									placeholder="Search by username"
 									autofocus
 									autocomplete="off"
 									aria-autocomplete="none"
@@ -84,92 +112,144 @@
 					</div>
 
 					<nav class="px-2 py-2 overflow-auto flex-1">
-						<ul class="space-y-1">
-							<InfiniteScroll
-								items={chat.conversations}
-								loadMore={chat.getMoreConversations}
-							>
-								{#snippet children(item)}
-									{@const data = item.data()}
-									{@const partnerId = data.members.find(
-										(uid: string) =>
-											uid !== getAuth().currentUser?.uid,
-									)}
-									<li>
-										<a
-											href={`/chats/${partnerId}`}
-											class={`w-full text-left px-3 py-3 rounded-md flex items-center gap-3 ${
-												page?.url?.pathname ===
-												`/chats/${partnerId}`
-													? "bg-blue-50"
-													: "hover:bg-gray-50"
-											}`}
-											onclick={(e) => {
-												searchQuery = undefined;
-											}}
-											aria-current={page?.url
-												?.pathname ===
-											`/chats/${partnerId}`
-												? "page"
-												: undefined}
-										>
-											{#if data.avatarUrl}
-												<img
-													src={data.avatarUrl}
-													alt={data.displayName}
-													class="w-10 h-10 rounded-full object-cover"
-												/>
-											{:else}
-												<div
-													class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm text-gray-600"
-												>
-													&#128100;
-												</div>
-											{/if}
-											<div class="flex-1 min-w-0">
-												<div
-													class="flex justify-between items-center"
-												>
+						{#if searchQuery !== undefined}
+							{#if searchResults.length === 0}
+								<li class="text-gray-500 px-3 py-3 text-center">
+									No users found.
+								</li>
+							{:else}
+								<ul class="space-y-1">
+									{#each searchResults as user}
+										<li>
+											<a
+												href={`/chats/${user.uid}`}
+												class="w-full text-left px-3 py-3 rounded-md flex items-center gap-3 hover:bg-gray-50"
+												onclick={() => {
+													searchQuery = undefined;
+												}}
+											>
+												{#if user.avatarUrl}
+													<img
+														src={user.avatarUrl}
+														alt={user.displayName}
+														class="w-10 h-10 rounded-full object-cover"
+													/>
+												{:else}
+													<div
+														class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm text-gray-600"
+													>
+														&#128100;
+													</div>
+												{/if}
+												<div class="flex-1 min-w-0">
 													<span
 														class="font-medium truncate h-6"
+														>{user.displayName}</span
 													>
-														{#await userLoader.load(partnerId) then user}
-															{user.displayName}
-														{:catch}
-															Loading...
-														{/await}
-													</span>
-													<span
-														class="text-xs text-gray-400"
-														>{data.recentMessages
-															?.length
-															? formatTimestamp(
-																	data
-																		.recentMessages[
-																		data
-																			.recentMessages
-																			.length -
-																			1
-																	].timestamp,
-																)
-															: ""}
-													</span>
 												</div>
-												<p
-													class="text-sm text-gray-500 truncate"
-												>
-													{data.recentMessages?.[
-														data.recentMessages
-															.length - 1
-													]?.text ?? ""}
-												</p>
-											</div>
-										</a>
-									</li>
-								{/snippet}
-							</InfiniteScroll>
-							<!-- add more conversation items as needed -->
-						</ul>
+											</a>
+										</li>
+									{/each}
+								</ul>
+							{/if}
+						{:else}
+							{#if chat.conversations.length === 0}
+								<div
+									class="text-gray-500 px-3 py-3 text-center"
+								>
+									No conversations yet. <br />Start a new chat
+									by clicking the + button above.
+								</div>
+							{/if}
+							<ul class="space-y-1">
+								<InfiniteScroll
+									items={chat.conversations}
+									loadMore={chat.getMoreConversations}
+								>
+									{#snippet children(item)}
+										{@const data = item.data()}
+										{@const partnerId = data.members.find(
+											(uid: string) =>
+												uid !==
+												getAuth().currentUser?.uid,
+										)}
+										<li>
+											<a
+												href={`/chats/${partnerId}`}
+												class={`w-full text-left px-3 py-3 rounded-md flex items-center gap-3 ${
+													page?.url?.pathname ===
+													`/chats/${partnerId}`
+														? "bg-blue-50"
+														: "hover:bg-gray-50"
+												}`}
+												onclick={(e) => {
+													searchQuery = undefined;
+												}}
+												aria-current={page?.url
+													?.pathname ===
+												`/chats/${partnerId}`
+													? "page"
+													: undefined}
+											>
+												{#if data.avatarUrl}
+													<img
+														src={data.avatarUrl}
+														alt={data.displayName}
+														class="w-10 h-10 rounded-full object-cover"
+													/>
+												{:else}
+													<div
+														class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm text-gray-600"
+													>
+														&#128100;
+													</div>
+												{/if}
+												<div class="flex-1 min-w-0">
+													<div
+														class="flex justify-between items-center"
+													>
+														<span
+															class="font-medium truncate h-6"
+														>
+															{#await userLoader.load(partnerId) then user}
+																{user.displayName}
+															{:catch}
+																Loading...
+															{/await}
+														</span>
+														<span
+															class="text-xs text-gray-400"
+															>{data
+																.recentMessages
+																?.length
+																? formatTimestamp(
+																		data
+																			.recentMessages[
+																			data
+																				.recentMessages
+																				.length -
+																				1
+																		]
+																			.timestamp,
+																	)
+																: ""}
+														</span>
+													</div>
+													<p
+														class="text-sm text-gray-500 truncate"
+													>
+														{data.recentMessages?.[
+															data.recentMessages
+																.length - 1
+														]?.text ?? ""}
+													</p>
+												</div>
+											</a>
+										</li>
+									{/snippet}
+								</InfiniteScroll>
+							</ul>
+						{/if}
 					</nav>
 				</aside>
 

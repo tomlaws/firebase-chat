@@ -88,6 +88,7 @@ export function createChat() {
             (a, b) =>
                 b.data().updatedAt.toMillis() - a.data().updatedAt.toMillis()
         );
+        console.log(conversations)
     }
 
     function getUid() {
