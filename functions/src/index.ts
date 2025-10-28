@@ -38,7 +38,7 @@ setGlobalOptions({ maxInstances: 10 });
 admin.initializeApp();
 const db = getFirestore();
 
-const chunkLimit = 300; // 10000000 = 10MB
+const chunkLimit = 10000000; // 10000000 = 10MB
 export const sendMessage = onCall(async (request) => {
     const uid = request.auth?.uid;
 
