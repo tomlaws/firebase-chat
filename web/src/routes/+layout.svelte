@@ -1,17 +1,46 @@
 <script lang="ts">
-	import "$lib/firebase";
+    import "$lib/firebase";
     import "../app.css";
     import favicon from "$lib/assets/favicon.svg";
-    import { getAuth } from "firebase/auth";
+    import { getAuth, getIdTokenResult, type User } from "firebase/auth";
     import { onMount } from "svelte";
+    import FullscreenLoader from "@/components/FullscreenLoader.svelte";
+    import { setUserContext } from "@/context";
+    import { goto } from "$app/navigation";
+    import { page } from "$app/state";
 
     let { children } = $props();
-    
+    let loading = $state(true);
+
+    let user = $state<User | any>(null);
+    let claims = $state<Record<string, any>>({});
+    setUserContext({ user: () => user, claims: () => claims });
+
     onMount(() => {
         const auth = getAuth();
-        const sub = auth.onAuthStateChanged((user) => {
-            if (!user) return;
-            console.log("User is authenticated:", user.uid);
+        console.log(page.url.pathname)
+        const sub = auth.onAuthStateChanged(async (firebaseUser) => {
+            if (firebaseUser) {
+                const { claims } = await getIdTokenResult(firebaseUser);
+                user = firebaseUser;
+                if (
+                    typeof claims.username !== "string" ||
+                    !claims.username.length
+                ) {
+                    if (page.url.pathname !== "/onboard") {
+                        goto("/onboard");
+                    }
+                } else {
+                    if (page.url.pathname === "/onboard") {
+                        goto("/");
+                    }
+                }
+            } else {
+                if (page.url.pathname !== "/login") {
+                    goto("/login");
+                }
+            }
+            loading = false;
         });
         return () => sub();
     });
@@ -22,4 +51,8 @@
     <title>Chat App</title>
 </svelte:head>
 
-{@render children?.()}
+{#if loading}
+    <FullscreenLoader />
+{:else}
+    {@render children?.()}
+{/if}

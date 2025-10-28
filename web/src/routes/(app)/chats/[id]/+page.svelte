@@ -5,6 +5,7 @@
     import { orderBy } from "firebase/firestore";
     import { chat } from "@/chat.svelte.js";
     import { formatTimestamp } from "@/utils.js";
+    import Icon from "@iconify/svelte";
 
     const { data } = $props();
     const id = $derived(data.id);
@@ -78,9 +79,9 @@
                     />
                     <button
                         type="submit"
-                        class="bg-blue-500 text-white rounded-r-lg px-4 py-2 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        class="cursor-pointer bg-blue-500 text-white rounded-r-lg px-3 py-2 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                        Send
+                        <Icon icon="lucide:send" width="24" height="24" />
                     </button>
                 </form>
             </div>

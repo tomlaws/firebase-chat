@@ -19,23 +19,9 @@
 
     onMount(() => {
         const auth = getAuth(firebaseApp);
-
-        // Check if user is already logged in
-        if (auth.currentUser) {
-            goto("/");
-            return;
-        }
-
-        const unsub = auth.onAuthStateChanged((user) => {
-            if (user) {
-                goto("/");
-            }
-        });
-
         // Initialize reCAPTCHA
         setupRecaptcha();
         return () => {
-            unsub();
             if (recaptchaVerifier) {
                 recaptchaVerifier.clear();
             }

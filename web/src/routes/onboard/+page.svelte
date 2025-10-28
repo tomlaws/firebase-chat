@@ -1,13 +1,12 @@
 <script lang="ts">
+    import { goto } from "$app/navigation";
     import { functions } from "@/firebase";
     import Icon from "@iconify/svelte";
     import { getAuth, getIdTokenResult } from "firebase/auth";
     import { httpsCallable } from "firebase/functions";
-    import { onMount } from "svelte";
 
     let username = $state("");
     let displayName = $state("");
-    let loading = $state(false);
     let submitted = $state(false);
 
     async function handleSubmit(e: Event) {
@@ -26,21 +25,8 @@
         console.log("Onboarding successful:", result.data, "Claims:", claims);
         submitted = false;
         // redirect to main app or dashboard
-        window.location.href = "/";
+        goto("/");
     }
-
-    onMount(() => {
-        const auth = getAuth();
-        const sub = auth.onAuthStateChanged(async (user) => {
-            if (!user) {
-                window.location.href = "/login";
-            } else {
-                const { claims } = await getIdTokenResult(user);
-                //if (typeof claims.username === "string" && claims.username.length) window.location.href = "/";
-            }
-        });
-        return () => sub();
-    });
 </script>
 
 <!-- <div

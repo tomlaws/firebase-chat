@@ -8,7 +8,7 @@
 </script>
 
 <div
-    class="loader-overlay"
+    class="loader-overlay bg-gray-50 bg-opacity-75"
     aria-hidden={false}
 >
     <div class="loader" role="status" aria-live="polite" aria-label={label}>
@@ -28,6 +28,8 @@
 
 <style>
     .loader-overlay {
+        position: fixed;
+        inset: 0;
         display: flex;
         align-items: center;
         justify-content: center;

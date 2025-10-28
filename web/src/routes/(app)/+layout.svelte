@@ -1,36 +1,29 @@
 <script lang="ts">
 	import "$lib/firebase";
 	import { onMount } from "svelte";
-	import { getAuth } from "firebase/auth";
+	import { getAuth, getIdTokenResult } from "firebase/auth";
 	import { page } from "$app/state";
 	import InfiniteScroll from "@/components/InfiniteScroll.svelte";
 	import { userLoader } from "@/cache";
 	import { chat } from "@/chat.svelte";
 	import { formatTimestamp } from "@/utils";
 	import Icon from "@iconify/svelte";
-	import Loader from "@/components/Loader.svelte";
 	import { httpsCallable } from "firebase/functions";
 	import { functions } from "$lib/firebase";
+	import Loader from "@/components/Loader.svelte";
+	import { getUserContext } from "@/context";
 
 	let { children } = $props();
 	let loading = $state(true);
+	let searching = $state(false);
 	let searchQuery = $state<String>();
 	let searchResults: Array<any> = $state([]);
+	let { user } = getUserContext();
 
-	let unsub: (() => void) | null = null;
 	onMount(() => {
-		const auth = getAuth();
-		const sub = auth.onAuthStateChanged((user) => {
-			if (unsub) unsub();
-			if (!user) {
-				window.location.href = "/login";
-				return;
-			}
-			console.log("Initializing chat for user:", user.uid);
-			unsub = chat.initializeChat(user.uid);
-			loading = false;
-		});
-		return () => sub();
+		const unsub = chat.initializeChat(user().uid);
+		loading = false;
+		return () => unsub?.();
 	});
 
 	async function onSearchQueryChange() {
@@ -42,12 +35,20 @@
 		if (trimmed.length < 3 || trimmed.length > 24) {
 			return;
 		}
-		const searchUsersByUsername = httpsCallable(
-			functions,
-			"searchUsersByUsername",
-		);
-		const result = await searchUsersByUsername({ username: trimmed });
-		searchResults = result.data as any;
+		searching = true;
+		try {
+			const searchUsersByUsername = httpsCallable(
+				functions,
+				"searchUsersByUsername",
+			);
+			const result = await searchUsersByUsername({ username: trimmed });
+			searchResults = result.data as any;
+		} catch (error) {
+			console.error("Error searching users:", error);
+			searchResults = [];
+		} finally {
+			searching = false;
+		}
 	}
 </script>
 
@@ -115,7 +116,15 @@
 						{#if searchQuery !== undefined}
 							{#if searchResults.length === 0}
 								<li class="text-gray-500 px-3 py-3 text-center">
-									No users found.
+									{#if searchQuery.trim().length < 3}
+										Type at least 3 characters to search.
+									{:else if searchQuery.trim().length > 24}
+										Username cannot exceed 24 characters.
+									{:else if searching}
+										<Loader />
+									{:else}
+										No users found.
+									{/if}
 								</li>
 							{:else}
 								<ul class="space-y-1">
