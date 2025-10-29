@@ -1,0 +1,18 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        "connected": {
+          ".read": "auth != null",
+          ".write": "$uid === auth.uid",
+          ".validate": "newData.isBoolean()"
+        },
+        "lastSeen": {
+          ".read": "auth != null",
+          ".write": "$uid === auth.uid",
+          ".validate": "newData.isNumber() && newData.val() >= now - 3 * 60 * 1000 && newData.val() <= now + 3 * 60 * 1000"
+        }
+      }
+    }
+  }
+}
