@@ -1,7 +1,7 @@
 <script lang="ts">
 	import "$lib/firebase";
 	import { onMount } from "svelte";
-	import { getAuth, getIdTokenResult } from "firebase/auth";
+	import { getAuth } from "firebase/auth";
 	import { page } from "$app/state";
 	import InfiniteScroll from "@/components/InfiniteScroll.svelte";
 	import { userLoader } from "@/cache";
@@ -12,8 +12,7 @@
 	import { functions } from "$lib/firebase";
 	import Loader from "@/components/Loader.svelte";
 	import { getUserContext } from "@/context";
-    import { goto } from "$app/navigation";
-
+    
 	let { children } = $props();
 	let loading = $state(true);
 	let searching = $state(false);
@@ -23,6 +22,9 @@
 	let { user } = getUserContext();
 
 	onMount(() => {
+		if (!user()?.uid) {
+			return;
+		}
 		const unsub = chat.initializeChat(user().uid);
 		loading = false;
 		return () => {

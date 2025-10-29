@@ -1,7 +1,7 @@
 {
   "projects": {
-    "default": "firebase-chat",
-    "dev": "firebase-chat"
+    "firebase-chat": "fir-chat-4ba55",
+    "default": "fir-chat-4ba55"
   },
   "targets": {},
   "etags": {}

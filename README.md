@@ -1,54 +1,148 @@
 # Firebase Chat
 
-A real-time chat app built with Firebase (Authentication + Firestore Database + Realtime Database)
+A real-time chat app built with Firebase (Authentication + Firestore + Realtime Database + Hosting)
 
 ## 📦 Tech Stack
-Frontend: Vite + React + Tailwind CSS
-
-Backend: Firebase Authentication, Firestore, Realtime Database, Cloud Functions
-
-Deployment: Firebase Hosting
+**Frontend:** SvelteKit + TypeScript + Tailwind CSS + Vite  
+**Backend:** Firebase Authentication, Firestore, Realtime Database, Cloud Functions  
+**Deployment:** Firebase Hosting
 
 ## 🚀 Features
 
-- Onboarding (Username + Display name)
-- Search by username and create new conversation
-- User Presence Tracking
-- Real-time messaging with Firestore
-- Online/offline status with Realtime Database
-- Cloud Functions for secure backend logic
+- **Phone Authentication** - Sign in with phone number and SMS verification
+- **User Onboarding** - Set username and display name
+- **Real-time Messaging** - Instant messaging with Firestore
+- **User Search** - Find users by username to start conversations
+- **Presence Tracking** - See when users are online/offline and last seen
+- **Message Chunking** - Efficient handling of large chat histories
+- **Responsive Design** - Works on desktop and mobile devices
+- **Secure Backend** - Cloud Functions handle server-side logic
 
-## 🛠️ Installation
+## 🛠️ Installation & Setup
 
-## Frontend
-```bash
-# Clone the repo
-git clone git@github.com:tomlaws/firebase-chat.git
+### Prerequisites
+- Node.js (v18 or later)
+- Firebase CLI: `npm install -g firebase-tools`
+- A Firebase project with Authentication, Firestore, and Realtime Database enabled
 
-# Navigate into the project folder
-cd web
+### Frontend Setup
+1. Navigate to the web directory:
+   ```bash
+   cd web
+   ```
 
-# Install dependencies
-npm install
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-# Start
-npm run dev
+3. Create a `.env` file in the `web` folder:
+   ```env
+   NODE_ENV=development
+   PUBLIC_FIREBASE_CONFIG='{
+     "apiKey": "<YOUR_API_KEY>",
+     "authDomain": "<YOUR_AUTH_DOMAIN>",
+     "projectId": "<YOUR_PROJECT_ID>",
+     "storageBucket": "<YOUR_STORAGE_BUCKET>",
+     "messagingSenderId": "<YOUR_MESSAGING_SENDER_ID>",
+     "appId": "<YOUR_APP_ID>",
+     "measurementId": "<YOUR_MEASUREMENT_ID>"
+   }'
+   PUBLIC_RTDB_URL="<YOUR_REALTIME_DATABASE_URL>"
+   ```
+
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+### Firebase Functions Setup
+1. Navigate to the functions directory:
+   ```bash
+   cd functions
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start the Firebase emulator:
+   ```bash
+   npm run serve
+   ```
+
+### Firebase Configuration
+1. Initialize your Firebase project:
+   ```bash
+   firebase login
+   firebase use --add
+   ```
+
+2. Set up Firestore security rules and indexes (already configured in the project)
+
+3. Configure phone authentication in the Firebase Console
+
+## 🏗️ Project Structure
+
+```
+├── web/                    # SvelteKit frontend
+│   ├── src/
+│   │   ├── routes/         # App routes
+│   │   ├── lib/            # Shared components and utilities
+│   │   └── app.html        # Main HTML template
+│   └── static/             # Static assets
+├── functions/              # Firebase Cloud Functions
+│   └── src/
+│       └── index.ts        # Function definitions
+├── firestore.rules         # Firestore security rules
+├── database.rules.json     # Realtime Database rules
+└── firebase.json           # Firebase configuration
 ```
 
-## Firebase Functions
-```bash
-# Navigate into the project folder
-cd functions
+## 📦 Deployment
 
-# Install dependencies
-npm install
+1. Build the web application:
+   ```bash
+   cd web && npm run build
+   ```
 
-# Deploy to Firebase
-firebase deploy
-```
+2. Deploy to Firebase:
+   ```bash
+   firebase deploy
+   ```
+
+   Or deploy specific services:
+   ```bash
+   firebase deploy --only hosting    # Deploy web app only
+   firebase deploy --only functions  # Deploy functions only
+   ```
+
+## 🔧 Key Technologies
+
+- **SvelteKit**: Full-stack web framework with file-based routing
+- **TypeScript**: Type-safe JavaScript development
+- **Tailwind CSS**: Utility-first CSS framework
+- **Firebase Auth**: Phone number authentication with reCAPTCHA
+- **Firestore**: NoSQL document database for messages and user data
+- **Realtime Database**: Real-time presence tracking
+- **Cloud Functions**: Serverless backend logic
 
 ## 🤝 Contributing
-Pull requests are welcome! For major changes, please open an issue first to discuss what you’d like to change.
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature-name`
+3. Commit your changes: `git commit -am 'Add some feature'`
+4. Push to the branch: `git push origin feature-name`
+5. Submit a pull request
 
 ## 📄 License
-This project is licensed under the MIT License.
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🔐 Security
+
+- All sensitive operations are handled by Cloud Functions
+- Firestore security rules prevent unauthorized access
+- Phone authentication provides secure user verification
+- Message chunking prevents database document size limits

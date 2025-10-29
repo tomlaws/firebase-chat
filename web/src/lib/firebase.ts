@@ -1,3 +1,4 @@
+import { dev } from '$app/environment';
 import { PUBLIC_FIREBASE_CONFIG } from '$env/static/public';
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
@@ -12,6 +13,9 @@ if (!getApps().length) {
 }
 
 const functions = getFunctions(getApp());
-connectFunctionsEmulator(functions, "localhost", 5001);
+
+if (process.env.NODE_ENV === 'development') {
+    connectFunctionsEmulator(functions, "localhost", 5001);
+}
 
 export { firebaseApp, functions };

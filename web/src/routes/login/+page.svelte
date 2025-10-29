@@ -1,6 +1,5 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { goto } from "$app/navigation";
     import {
         getAuth,
         signInWithPhoneNumber,
@@ -103,7 +102,6 @@
 
         try {
             await confirmationResult.confirm(verificationCode);
-            goto("/");
         } catch (e: any) {
             console.error("Error verifying code:", e);
             error = "Invalid verification code. Please try again.";

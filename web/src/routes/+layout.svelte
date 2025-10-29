@@ -1,4 +1,5 @@
 <script lang="ts">
+    export const prerender = true;
     import "$lib/firebase";
     import "../app.css";
     import favicon from "$lib/assets/favicon.svg";
@@ -22,12 +23,15 @@
             if (firebaseUser) {
                 console.log("User logged in:", firebaseUser.uid);
                 const { claims } = await getIdTokenResult(firebaseUser);
+                console.log("User claims:", claims);
                 user = firebaseUser;
                 if (
                     typeof claims.username !== "string" ||
                     !claims.username.length
                 ) {
+                    console.log("User missing username claim, redirecting to onboard");
                     if (page.url.pathname !== "/onboard") {
+                        console.log("User is not on onboard page, redirecting");
                         goto("/onboard");
                     }
                 } else {
