@@ -18,9 +18,9 @@
 
     onMount(() => {
         const auth = getAuth();
-        console.log(page.url.pathname)
         const sub = auth.onAuthStateChanged(async (firebaseUser) => {
             if (firebaseUser) {
+                console.log("User logged in:", firebaseUser.uid);
                 const { claims } = await getIdTokenResult(firebaseUser);
                 user = firebaseUser;
                 if (

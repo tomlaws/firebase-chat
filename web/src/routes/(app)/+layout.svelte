@@ -12,18 +12,22 @@
 	import { functions } from "$lib/firebase";
 	import Loader from "@/components/Loader.svelte";
 	import { getUserContext } from "@/context";
+    import { goto } from "$app/navigation";
 
 	let { children } = $props();
 	let loading = $state(true);
 	let searching = $state(false);
 	let searchQuery = $state<String>();
 	let searchResults: Array<any> = $state([]);
+	let menuOpen = $state(false);
 	let { user } = getUserContext();
 
 	onMount(() => {
 		const unsub = chat.initializeChat(user().uid);
 		loading = false;
-		return () => unsub?.();
+		return () => {
+			unsub?.();
+		}
 	});
 
 	async function onSearchQueryChange() {
@@ -50,8 +54,12 @@
 			searching = false;
 		}
 	}
-</script>
 
+	async function logout() {
+		await chat.close();
+		await getAuth().signOut();
+	}
+</script>
 {#if loading}
 	<Loader />
 {:else if chat.getUid()}
@@ -74,8 +82,9 @@
 									class="p-2 cursor-pointer rounded-md hover:bg-gray-100"
 								>
 									<Icon
-										icon="mdi:arrow-left"
-										class="w-5 h-5"
+										icon="lucide:chevron-left"
+										width="24"
+										height="24"
 									/>
 								</button>
 								<input
@@ -90,6 +99,39 @@
 									class="ml-1 flex-1 px-3 py-2 rounded-md border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400"
 								/>
 							{:else}
+								<div class="relative">
+									<button
+										onclick={() => (menuOpen = !menuOpen)}
+										class="p-2 cursor-pointer rounded-md hover:bg-gray-100 dropdown"
+									>
+										<Icon
+											icon="lucide:menu"
+											width="24"
+											height="24"
+										/>
+									</button>
+									{#if menuOpen}
+										<div
+											class="absolute left-0 top-[100%] mt-2 w-48 bg-white border border-gray-200 rounded shadow-lg z-10 text-left"
+										>
+											<ul class="py-1">
+												<li>
+													<button
+														onclick={logout}
+														class="cursor-pointer w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
+													>
+														<Icon
+															icon="lucide:log-out"
+															width="18"
+															height="18"
+														/>
+														<span>Logout</span>
+													</button>
+												</li>
+											</ul>
+										</div>
+									{/if}
+								</div>
 								<h2 class="text-lg font-semibold">Chats</h2>
 								<button
 									onclick={() => (searchQuery = "")}

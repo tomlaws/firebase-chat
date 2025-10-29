@@ -1,6 +1,6 @@
+import { PUBLIC_RTDB_URL } from '$env/static/public';
 import {
     collection,
-    doc,
     getDocs,
     getFirestore,
     limit,
@@ -14,6 +14,8 @@ import {
     type DocumentData,
     type Unsubscribe
 } from "firebase/firestore";
+import { getDatabase, ref, onValue, set, serverTimestamp, onDisconnect, off } from "firebase/database";
+import { firebaseApp } from "./firebase";
 
 export type Conversation = {
     lastChunkSize: number;
@@ -27,11 +29,14 @@ export type Conversation = {
 };
 export const chat = createChat();
 
+const rtdb = getDatabase(firebaseApp, PUBLIC_RTDB_URL);
+
 export function createChat() {
     let currentUid = $state<string>();
     let conversations = $state<Array<QueryDocumentSnapshot<DocumentData, DocumentData>>>([]);
     let recentMessagesMap = $state<Record<string, any[]>>({});
-    
+    let unsub: null | (() => Promise<void>) = null;
+
     function initializeChat(uid: string): Unsubscribe {
         currentUid = uid;
         const q = query(
@@ -58,7 +63,47 @@ export function createChat() {
                     b.data().updatedAt.toMillis() - a.data().updatedAt.toMillis()
             );
         });
-        return () => unsubscribe?.();
+
+        const stopPresenceTracking = initPresence(uid);
+
+        unsub = async () => {
+            await stopPresenceTracking();
+            unsubscribe();
+        }
+        return close;
+    }
+
+    async function close() {
+        await unsub?.();
+        unsub = null;
+    }
+
+    function initPresence(uid: string) {
+        const connected = ref(rtdb, `users/${uid}/connected`);
+        const lastSeenRef = ref(rtdb, `users/${uid}/lastSeen`);
+        const intervalId = setInterval(() => {
+            // set lastSeen to server timestamp every minute
+            set(lastSeenRef, serverTimestamp);
+        }, 60 * 1000); // Every minute
+
+        onValue(lastSeenRef, (snapshot) => {
+            set(lastSeenRef, serverTimestamp());
+        }, { onlyOnce: true });
+
+        const unsub = onValue(connected, (snapshot) => {
+            if (!snapshot.exists() || !snapshot.val()) {
+                set(connected, true)
+            }
+        });
+        onDisconnect(connected).set(false);
+
+        // Return a cleanup function to remove the listener
+        return async () => {
+            console.log("Cleaning up presence tracking for", uid);
+            unsub();
+            await set(connected, false);
+            clearInterval(intervalId);
+        };
     }
 
     async function getMoreConversations() {
@@ -88,7 +133,6 @@ export function createChat() {
             (a, b) =>
                 b.data().updatedAt.toMillis() - a.data().updatedAt.toMillis()
         );
-        console.log(conversations)
     }
 
     function getUid() {
@@ -99,11 +143,37 @@ export function createChat() {
         return recentMessagesMap[chatId] || [];
     }
 
+    function watchUserPresence(
+        targetUid: string,
+        callback: (isOnline: boolean, lastSeen?: number) => void
+    ) {
+        const connectedRef = ref(rtdb, `users/${targetUid}/connected`);
+        const lastSeenRef = ref(rtdb, `users/${targetUid}/lastSeen`);
+
+        const unsub = onValue(connectedRef, (snapshot) => {
+            const isOnline = snapshot.exists();
+            if (isOnline) {
+                callback(true);
+            } else {
+                onValue(lastSeenRef, (lastSnap) => {
+                    callback(false, lastSnap.val());
+                }, { onlyOnce: true });
+            }
+        });
+
+        // Return a cleanup function
+        return () => {
+            unsub();
+        };
+    }
+
     return {
         getUid,
         conversations,
         initializeChat,
         getMoreConversations,
-        getRecentMessages
+        getRecentMessages,
+        watchUserPresence,
+        close
     }
 }

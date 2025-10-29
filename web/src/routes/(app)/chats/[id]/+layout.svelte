@@ -1,10 +1,25 @@
 <script lang="ts">
     import { page } from "$app/state";
     import { userLoader } from "@/cache.js";
+    import { chat } from "@/chat.svelte.js";
+    import { onMount } from "svelte";
 
     const { children, data } = $props();
     const userId = $derived(page.params.id)!;
     const AVATAR_FALLBACK = "/default-avatar.png";
+
+    let isOnline = $state<boolean>(false);
+    let lastSeen = $state<Date | null>(null);
+
+    onMount(() => {
+        const p = chat.watchUserPresence(userId, (_isOnline, _lastSeenTimestamp) => {
+            isOnline = _isOnline;
+            lastSeen = (_lastSeenTimestamp ? new Date(_lastSeenTimestamp) : null);
+        });
+        return () => {
+            p();
+        };
+    });
 </script>
 
 <header
@@ -36,7 +51,19 @@
         <div
             class="text-sm text-gray-500 mt-0.5 whitespace-nowrap text-ellipsis overflow-hidden"
         >
-            last seen
+            {#if isOnline}
+                <span class="text-green-500">●</span> Online
+            {:else if lastSeen}
+                Last seen {lastSeen.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })}
+            {:else}
+                Offline
+            {/if}
         </div>
     </div>
 </header>

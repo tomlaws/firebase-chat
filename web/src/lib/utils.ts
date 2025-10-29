@@ -14,7 +14,7 @@ export type WithoutChildrenOrChild<T> = WithoutChildren<WithoutChild<T>>;
 export type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & { ref?: U | null };
 
 export function formatTimestamp(timestamp: Timestamp): string {
-	return timestamp?.toDate().toLocaleTimeString([], {
+	return timestamp?.toDate().toLocaleTimeString(['en-US'], {
 		hour: "numeric",
 		minute: "2-digit",
 	});
