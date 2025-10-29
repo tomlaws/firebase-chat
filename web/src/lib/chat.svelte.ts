@@ -101,7 +101,10 @@ export function createChat() {
         return async () => {
             console.log("Cleaning up presence tracking for", uid);
             unsub();
-            await set(connected, false);
+            await Promise.all([
+                set(connected, false),
+                set(lastSeenRef, serverTimestamp())
+            ]);
             clearInterval(intervalId);
         };
     }
