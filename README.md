@@ -25,6 +25,13 @@ A real-time chat app built with Firebase (Authentication + Firestore + Realtime 
 - Firebase CLI: `npm install -g firebase-tools`
 - A Firebase project with Authentication, Firestore, and Realtime Database enabled
 
+### Firebase Configuration
+Connect to your Firebase project:
+   ```bash
+   firebase login
+   firebase use --add
+   ```
+
 ### Frontend Setup
 1. Navigate to the web directory:
    ```bash
@@ -72,17 +79,6 @@ A real-time chat app built with Firebase (Authentication + Firestore + Realtime 
    npm run serve
    ```
 
-### Firebase Configuration
-1. Initialize your Firebase project:
-   ```bash
-   firebase login
-   firebase use --add
-   ```
-
-2. Set up Firestore security rules and indexes (already configured in the project)
-
-3. Configure phone authentication in the Firebase Console
-
 ## 🏗️ Project Structure
 
 ```
@@ -107,15 +103,9 @@ A real-time chat app built with Firebase (Authentication + Firestore + Realtime 
    cd web && npm run build
    ```
 
-2. Deploy to Firebase:
+2. Deploy to Firebase by running below command at root directory:
    ```bash
    firebase deploy
-   ```
-
-   Or deploy specific services:
-   ```bash
-   firebase deploy --only hosting    # Deploy web app only
-   firebase deploy --only functions  # Deploy functions only
    ```
 
 ## 🔧 Key Technologies
