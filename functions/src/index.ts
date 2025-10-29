@@ -50,6 +50,10 @@ export const sendMessage = onCall(async (request) => {
     if (!to || !text || typeof text !== 'string') {
         throw new Error('Invalid input');
     }
+    // Prevent sending messages to self
+    if (to === uid) {
+        throw new Error('Cannot send message to self');
+    }
 
     // Verify that the recipient exists
     const uidExists = await admin.auth().getUser(to).then(() => true).catch(() => false);
