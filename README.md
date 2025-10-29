@@ -2,6 +2,8 @@
 
 A real-time chat app built with Firebase (Authentication + Firestore + Realtime Database + Hosting)
 
+<img src="https://i.imgur.com/ZXKgJMY.jpeg" width="80%"/>
+
 ## 📦 Tech Stack
 **Frontend:** SvelteKit + TypeScript + Tailwind CSS + Vite  
 **Backend:** Firebase Authentication, Firestore, Realtime Database, Cloud Functions  
