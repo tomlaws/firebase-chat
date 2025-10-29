@@ -19,7 +19,6 @@ Demo: https://fir-chat-4ba55.web.app/
 - **User Search** - Find users by username to start conversations
 - **Presence Tracking** - See when users are online/offline and last seen
 - **Message Chunking** - Efficient handling of large chat histories
-- **Responsive Design** - Works on desktop and mobile devices
 - **Secure Backend** - Cloud Functions handle server-side logic
 
 ## 🛠️ Installation & Setup
