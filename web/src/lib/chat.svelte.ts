@@ -147,11 +147,12 @@ export function createChat() {
         targetUid: string,
         callback: (isOnline: boolean, lastSeen?: number) => void
     ) {
+        console.log("Watching presence for", targetUid);
         const connectedRef = ref(rtdb, `users/${targetUid}/connected`);
         const lastSeenRef = ref(rtdb, `users/${targetUid}/lastSeen`);
 
         const unsub = onValue(connectedRef, (snapshot) => {
-            const isOnline = snapshot.exists();
+            const isOnline = snapshot.exists() && snapshot.val() === true;
             if (isOnline) {
                 callback(true);
             } else {
