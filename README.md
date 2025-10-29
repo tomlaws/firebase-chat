@@ -2,6 +2,8 @@
 
 A real-time chat app built with Firebase (Authentication + Firestore + Realtime Database + Hosting)
 
+Demo: https://fir-chat-4ba55.web.app/
+
 <img src="https://i.imgur.com/ZXKgJMY.jpeg" width="80%"/>
 
 ## 📦 Tech Stack
