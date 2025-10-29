@@ -35,7 +35,7 @@
                         goto("/onboard");
                     }
                 } else {
-                    if (page.url.pathname === "/onboard") {
+                    if (page.url.pathname != "/") {
                         goto("/");
                     }
                 }

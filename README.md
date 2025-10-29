@@ -45,7 +45,6 @@ Connect to your Firebase project:
 
 3. Create a `.env` file in the `web` folder:
    ```env
-   NODE_ENV=development
    PUBLIC_FIREBASE_CONFIG='{
      "apiKey": "<YOUR_API_KEY>",
      "authDomain": "<YOUR_AUTH_DOMAIN>",
