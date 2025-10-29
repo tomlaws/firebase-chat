@@ -43,8 +43,8 @@ cd functions
 # Install dependencies
 npm install
 
-# Deploy functions to Firebase
-firebase deploy --only functions
+# Deploy to Firebase
+firebase deploy
 ```
 
 ## 🤝 Contributing
