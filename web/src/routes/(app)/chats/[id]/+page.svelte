@@ -1,7 +1,5 @@
 <script lang="ts">
     import ChunkedInfiniteScroll from "@/components/MessageList.svelte";
-    import { httpsCallable } from "firebase/functions";
-    import { functions } from "@/firebase.js";
     import { orderBy } from "firebase/firestore";
     import { chat } from "@/chat.svelte.js";
     import { formatTimestamp } from "@/utils.js";
@@ -15,14 +13,7 @@
     );
     let path = $derived(`chats/${chatId}/messages`);
     function sendMessage(text: string) {
-        const sendFunc = httpsCallable(functions, "sendMessage");
-        sendFunc({ text, to: id })
-            .then((result) => {
-                console.log("Function result:", result.data);
-            })
-            .catch((error) => {
-                console.error("Error calling function:", error);
-            });
+        chat.sendMessage(chatId!, id, text);
     }
 </script>
 
@@ -37,6 +28,7 @@
                     <div
                         class="flex py-2 px-4"
                         class:justify-end={item.uid === userId}
+                        class:opacity-50={item.sending}
                     >
                         <div
                             class={item.uid === userId

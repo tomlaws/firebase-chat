@@ -15,7 +15,9 @@ import {
     type Unsubscribe
 } from "firebase/firestore";
 import { getDatabase, ref, onValue, set, serverTimestamp, onDisconnect, off } from "firebase/database";
-import { firebaseApp } from "./firebase";
+import { firebaseApp, functions } from "./firebase";
+import { httpsCallable } from 'firebase/functions';
+import { v7 as uuidv7 } from 'uuid';
 
 export type Conversation = {
     lastChunkSize: number;
@@ -33,8 +35,9 @@ const rtdb = getDatabase(firebaseApp, PUBLIC_RTDB_URL);
 
 export function createChat() {
     let currentUid = $state<string>();
+    let loaded = $state<boolean>(false);
     let conversations = $state<Array<QueryDocumentSnapshot<DocumentData, DocumentData>>>([]);
-    let recentMessagesMap = $state<Record<string, any[]>>({});
+    let recentMessagesMap = $state<Record<string, { text: string, timestamp: Timestamp | Date, uid: string, sending?: boolean }[]>>({});
     let unsub: null | (() => Promise<void>) = null;
 
     function initializeChat(uid: string): Unsubscribe {
@@ -47,6 +50,7 @@ export function createChat() {
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
+            loaded = true;
             const docs = snapshot.docs;
             for (const doc of docs) {
                 const idx = conversations.findIndex((c) => c.id === doc.id);
@@ -138,6 +142,10 @@ export function createChat() {
         );
     }
 
+    function getLoaded() {
+        return loaded;
+    }
+
     function getUid() {
         return currentUid;
     }
@@ -171,13 +179,40 @@ export function createChat() {
         };
     }
 
+    function sendMessage(chatId: string, to: string, text: string) {
+        const sendFunc = httpsCallable(functions, "sendMessage");
+        // add to recentMessagesMap immediately for optimistic UI
+        if (!recentMessagesMap[to]) {
+            recentMessagesMap[to] = [];
+        }
+        const message = {
+            text: text,
+            timestamp: new Date(),
+            uid: currentUid!,
+            sending: true
+        };
+        recentMessagesMap[chatId].push(message);
+        recentMessagesMap = { ...recentMessagesMap };
+        sendFunc({ text, to })
+            .then((result) => {
+                console.log("Function result:", result.data);
+                message.sending = false;
+                recentMessagesMap = { ...recentMessagesMap };
+            })
+            .catch((error) => {
+                console.error("Error calling function:", error);
+            });
+    }
+
     return {
+        getLoaded,
         getUid,
         conversations,
         initializeChat,
         getMoreConversations,
         getRecentMessages,
         watchUserPresence,
+        sendMessage,
         close
     }
 }

@@ -12,7 +12,7 @@
 	import { functions } from "$lib/firebase";
 	import Loader from "@/components/Loader.svelte";
 	import { getUserContext } from "@/context";
-    
+
 	let { children } = $props();
 	let loading = $state(true);
 	let searching = $state(false);
@@ -29,7 +29,7 @@
 		loading = false;
 		return () => {
 			unsub?.();
-		}
+		};
 	});
 
 	async function onSearchQueryChange() {
@@ -62,6 +62,7 @@
 		await getAuth().signOut();
 	}
 </script>
+
 {#if loading}
 	<Loader />
 {:else if chat.getUid()}
@@ -205,6 +206,10 @@
 									{/each}
 								</ul>
 							{/if}
+						{:else if !chat.getLoaded()}
+							<div class="text-gray-500 px-3 py-3 text-center">
+								Loading conversations...
+							</div>
 						{:else}
 							{#if chat.conversations.length === 0}
 								<div
