@@ -10,7 +10,7 @@
 import { setGlobalOptions } from "firebase-functions";
 import { onCall } from "firebase-functions/https";
 import * as admin from 'firebase-admin';
-import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { FieldValue, getFirestore, Timestamp } from "firebase-admin/firestore";
 import { v7 as uuidv7 } from 'uuid';
 import sizeof from "firestore-size";
 
@@ -69,7 +69,7 @@ export const sendMessage = onCall(async (request) => {
     const message = {
         uid,
         text,
-        timestamp: new Date(),
+        timestamp: Timestamp.now()
     };
     const messageSize = sizeof(message);
 
@@ -100,7 +100,7 @@ export const sendMessage = onCall(async (request) => {
         messageBytes: FieldValue.increment(messageSize),
         recentMessages: FieldValue.arrayUnion(message),
         members: members,
-        updatedAt: new Date(),
+        updatedAt: Timestamp.now(),
     }, { merge: true });
     return { success: true, message };
 });

@@ -29,6 +29,14 @@ export type Conversation = {
         displayName: string;
     }>;
 };
+
+export type Message = {
+    text: string;
+    timestamp: Timestamp | Date;
+    uid: string;
+    tmpId?: string;
+};
+
 export const chat = createChat();
 
 const rtdb = getDatabase(firebaseApp, PUBLIC_RTDB_URL);
@@ -37,7 +45,9 @@ export function createChat() {
     let currentUid = $state<string>();
     let loaded = $state<boolean>(false);
     let conversations = $state<Array<QueryDocumentSnapshot<DocumentData, DocumentData>>>([]);
-    let recentMessagesMap = $state<Record<string, { text: string, timestamp: Timestamp | Date, uid: string, sending?: boolean }[]>>({});
+    let recentMessagesMap = $state<Record<string, Message[]>>({});
+    let newMessagesMap = $state<Record<string, Message[]>>({}); // to be processed
+    let sendingMessagesMap = $state<Record<string, Message[]>>({});
     let unsub: null | (() => Promise<void>) = null;
 
     function initializeChat(uid: string): Unsubscribe {
@@ -53,14 +63,26 @@ export function createChat() {
             loaded = true;
             const docs = snapshot.docs;
             for (const doc of docs) {
-                const idx = conversations.findIndex((c) => c.id === doc.id);
+                const chatId = doc.id;
+                const idx = conversations.findIndex((c) => c.id === chatId);
                 if (idx !== -1) {
                     conversations[idx] = doc;
                 } else {
                     conversations.push(doc);
                 }
                 const recentMessages = doc.data().recentMessages || [];
-                recentMessagesMap[doc.id] = recentMessages;
+                if (recentMessagesMap[chatId]) {
+                    const oldLen = recentMessagesMap[chatId].length;
+                    const newMessages = recentMessages.slice(oldLen);
+                    if (newMessages.length > 0) {
+                        if (!newMessagesMap[chatId]) {
+                            newMessagesMap[chatId] = [];
+                        }
+                        newMessagesMap[chatId] = newMessagesMap[chatId].concat(newMessages);
+                        removeMessagesFromSending(chatId);
+                    }
+                }
+                recentMessagesMap[chatId] = recentMessages;
             }
             conversations.sort(
                 (a, b) =>
@@ -103,7 +125,6 @@ export function createChat() {
 
         // Return a cleanup function to remove the listener
         return async () => {
-            console.log("Cleaning up presence tracking for", uid);
             unsub();
             await Promise.all([
                 set(connected, false),
@@ -151,14 +172,18 @@ export function createChat() {
     }
 
     function getRecentMessages(chatId: string) {
-        return recentMessagesMap[chatId] || [];
+        const recentMessages = recentMessagesMap[chatId] || [];
+        const sendingMessages = sendingMessagesMap[chatId] || [];
+        // merge recentMessages and sendingMessages according to timestamp
+        const merged = [...recentMessages, ...sendingMessages];
+        merged.sort((a, b) => a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : a.timestamp.getTime() - (b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : b.timestamp.getTime()));
+        return merged;
     }
 
     function watchUserPresence(
         targetUid: string,
         callback: (isOnline: boolean, lastSeen?: number) => void
     ) {
-        console.log("Watching presence for", targetUid);
         const connectedRef = ref(rtdb, `users/${targetUid}/connected`);
         const lastSeenRef = ref(rtdb, `users/${targetUid}/lastSeen`);
 
@@ -181,27 +206,52 @@ export function createChat() {
 
     function sendMessage(chatId: string, to: string, text: string) {
         const sendFunc = httpsCallable(functions, "sendMessage");
-        // add to recentMessagesMap immediately for optimistic UI
-        if (!recentMessagesMap[to]) {
-            recentMessagesMap[to] = [];
+        // add to sendingMessagesMap immediately for optimistic UI
+        if (!sendingMessagesMap[chatId]) {
+            sendingMessagesMap[chatId] = [];
         }
-        const message = {
+        let message: Message = {
             text: text,
             timestamp: new Date(),
             uid: currentUid!,
-            sending: true
+            tmpId: uuidv7()
         };
-        recentMessagesMap[chatId].push(message);
-        recentMessagesMap = { ...recentMessagesMap };
+        sendingMessagesMap[chatId].push(message);
         sendFunc({ text, to })
             .then((result) => {
-                console.log("Function result:", result.data);
-                message.sending = false;
-                recentMessagesMap = { ...recentMessagesMap };
+                // update timestamp
+                for (const msg of sendingMessagesMap[chatId]) {
+                    if (msg.tmpId === message.tmpId) {
+                        const timestampStr = (result.data as any).message.timestamp;
+                        msg.timestamp = new Timestamp(timestampStr._seconds, timestampStr._nanoseconds);
+                        delete msg.tmpId;
+                        removeMessagesFromSending(chatId);
+                        break;
+                    }
+                }
             })
             .catch((error) => {
                 console.error("Error calling function:", error);
             });
+    }
+
+    function removeMessagesFromSending(chatId: string) {
+        if (!sendingMessagesMap[chatId]) return;
+        const sendingMessages = sendingMessagesMap[chatId];
+        const newMessages = newMessagesMap[chatId] || [];
+        if (newMessages.length == 0) return;
+        for (let i = newMessages.length - 1; i >= 0; i--) {
+            const newMsg = newMessages[i];
+            for (let j = sendingMessages.length - 1; j >= 0; j--) {
+                const sendingMsg = sendingMessages[j];
+                if (sendingMsg.uid === newMsg.uid && sendingMsg.text === newMsg.text && sendingMsg.timestamp instanceof Timestamp && newMsg.timestamp instanceof Timestamp && sendingMsg.timestamp.isEqual(newMsg.timestamp)) {
+                    sendingMessages.splice(j, 1);
+                    newMessages.splice(i, 1);
+                }
+            }
+        }
+        sendingMessagesMap[chatId] = sendingMessages;
+        sendingMessagesMap = sendingMessagesMap;
     }
 
     return {

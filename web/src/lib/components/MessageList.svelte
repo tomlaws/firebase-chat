@@ -48,7 +48,6 @@
     let recentMessageSize = 0;
     $effect(() => {
         const recentMessages = chat.getRecentMessages(chatId) ?? [];
-        console.log("Recent messages updated:", JSON.stringify(recentMessages));
         untrack(() => {
             if (recentMessages.length < recentMessageSize) {
                 // insert new chunk for recentMessages

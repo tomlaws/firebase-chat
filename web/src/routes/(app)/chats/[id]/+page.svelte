@@ -11,9 +11,13 @@
     const chatId = $derived(
         userId ? (userId > id ? `${id}_${userId}` : `${userId}_${id}`) : null,
     );
-    let path = $derived(`chats/${chatId}/messages`);
     function sendMessage(text: string) {
         chat.sendMessage(chatId!, id, text);
+        // focus again the input after sending
+        const input = document.querySelector('input[name="text"]') as HTMLInputElement;
+        if (input) {
+            input.focus();
+        }
     }
 </script>
 
@@ -28,7 +32,7 @@
                     <div
                         class="flex py-2 px-4"
                         class:justify-end={item.uid === userId}
-                        class:opacity-50={item.sending}
+                        class:opacity-50={item.timestamp instanceof Date}
                     >
                         <div
                             class={item.uid === userId
