@@ -13,8 +13,8 @@ export type WithoutChildren<T> = T extends { children?: any } ? Omit<T, "childre
 export type WithoutChildrenOrChild<T> = WithoutChildren<WithoutChild<T>>;
 export type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & { ref?: U | null };
 
-export function formatTimestamp(timestamp: Timestamp | Date): string {
-	return (timestamp instanceof Date ? timestamp : timestamp?.toDate()).toLocaleTimeString(['en-US'], {
+export function formatTimestamp(timestamp: Timestamp | number): string {
+	return (typeof timestamp === "number" ? new Date(timestamp) : timestamp?.toDate()).toLocaleTimeString(['en-US'], {
 		hour: "numeric",
 		minute: "2-digit",
 	});

@@ -13,6 +13,7 @@ import * as admin from 'firebase-admin';
 import { FieldValue, getFirestore, Timestamp } from "firebase-admin/firestore";
 import { v7 as uuidv7 } from 'uuid';
 import sizeof from "firestore-size";
+import { truncatedSha256 } from "./util";
 
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -46,7 +47,7 @@ export const sendMessage = onCall(async (request) => {
         throw new Error('Authentication required');
     }
 
-    const { text, to } = request.data;
+    const { text, to, timestamp } = request.data;
     if (!to || !text || typeof text !== 'string') {
         throw new Error('Invalid input');
     }
@@ -66,7 +67,21 @@ export const sendMessage = onCall(async (request) => {
         throw new Error('Message too long');
     }
 
+    // Validate timestamp is a number
+    if (typeof timestamp !== 'number') {
+        throw new Error('Invalid timestamp');
+    }
+    // Limit timestamp to within 1 hour of current time
+    const now = Date.now();
+    if (timestamp < now - 3600000 || timestamp > now + 3600000) {
+        throw new Error('Timestamp out of range');
+    }
+
+    // Generate sha256 hash
+    const hash = await truncatedSha256(uid, timestamp);
+
     const message = {
+        id: hash,
         uid,
         text,
         timestamp: Timestamp.now()

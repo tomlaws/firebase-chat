@@ -31,10 +31,10 @@ export type Conversation = {
 };
 
 export type Message = {
+    id?: string;
     text: string;
-    timestamp: Timestamp | Date;
+    timestamp: Timestamp | number;
     uid: string;
-    tmpId?: string;
 };
 
 export const chat = createChat();
@@ -176,7 +176,7 @@ export function createChat() {
         const sendingMessages = sendingMessagesMap[chatId] || [];
         // merge recentMessages and sendingMessages according to timestamp
         const merged = [...recentMessages, ...sendingMessages];
-        merged.sort((a, b) => a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : a.timestamp.getTime() - (b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : b.timestamp.getTime()));
+        merged.sort((a, b) => a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : a.timestamp - (b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : b.timestamp));
         return merged;
     }
 
@@ -204,6 +204,27 @@ export function createChat() {
         };
     }
 
+    async function truncatedSha256(userId: string, timestamp: number, length = 8) {
+        // Combine userId and timestamp into a single string
+        const input = `${userId}-${timestamp}`;
+
+        // Encode the input string into bytes
+        const encoder = new TextEncoder();
+        const data = encoder.encode(input);
+
+        // Compute SHA-256 digest
+        const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+
+        // Convert buffer to hex string
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hexString = hashArray
+            .map(b => b.toString(16).padStart(2, "0"))
+            .join("");
+
+        // Return truncated hex (default: 8 chars)
+        return hexString.slice(0, length);
+    }
+
     function sendMessage(chatId: string, to: string, text: string) {
         const sendFunc = httpsCallable(functions, "sendMessage");
         // add to sendingMessagesMap immediately for optimistic UI
@@ -212,30 +233,20 @@ export function createChat() {
         }
         let message: Message = {
             text: text,
-            timestamp: new Date(),
+            timestamp: Date.now(),
             uid: currentUid!,
-            tmpId: uuidv7()
         };
         sendingMessagesMap[chatId].push(message);
-        sendFunc({ text, to })
+        sendFunc({ text, to, timestamp: message.timestamp })
             .then((result) => {
-                // update timestamp
-                for (const msg of sendingMessagesMap[chatId]) {
-                    if (msg.tmpId === message.tmpId) {
-                        const timestampStr = (result.data as any).message.timestamp;
-                        msg.timestamp = new Timestamp(timestampStr._seconds, timestampStr._nanoseconds);
-                        delete msg.tmpId;
-                        removeMessagesFromSending(chatId);
-                        break;
-                    }
-                }
+                console.log("Message sent:", result.data);
             })
             .catch((error) => {
                 console.error("Error calling function:", error);
             });
     }
 
-    function removeMessagesFromSending(chatId: string) {
+    async function removeMessagesFromSending(chatId: string) {
         if (!sendingMessagesMap[chatId]) return;
         const sendingMessages = sendingMessagesMap[chatId];
         const newMessages = newMessagesMap[chatId] || [];
@@ -244,7 +255,8 @@ export function createChat() {
             const newMsg = newMessages[i];
             for (let j = sendingMessages.length - 1; j >= 0; j--) {
                 const sendingMsg = sendingMessages[j];
-                if (sendingMsg.uid === newMsg.uid && sendingMsg.text === newMsg.text && sendingMsg.timestamp instanceof Timestamp && newMsg.timestamp instanceof Timestamp && sendingMsg.timestamp.isEqual(newMsg.timestamp)) {
+                const computed = await truncatedSha256(currentUid!, sendingMsg.timestamp as number);
+                if (newMsg.id === computed) {
                     sendingMessages.splice(j, 1);
                     newMessages.splice(i, 1);
                 }
