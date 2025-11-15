@@ -32,7 +32,7 @@
                     <div
                         class="flex py-2 px-4"
                         class:justify-end={item.uid === userId}
-                        class:opacity-50={item.timestamp instanceof Date}
+                        class:opacity-50={typeof item.timestamp === "number"}
                     >
                         <div
                             class={item.uid === userId
