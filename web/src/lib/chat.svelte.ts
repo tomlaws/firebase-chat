@@ -17,7 +17,6 @@ import {
 import { getDatabase, ref, onValue, set, serverTimestamp, onDisconnect, off } from "firebase/database";
 import { firebaseApp, functions } from "./firebase";
 import { httpsCallable } from 'firebase/functions';
-import { v7 as uuidv7 } from 'uuid';
 
 export type Conversation = {
     lastChunkSize: number;
